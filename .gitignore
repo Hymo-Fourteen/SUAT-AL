@@ -9,3 +9,7 @@ Joint_Out_of_Distribution_Filtering_and_Data_Discovery_Active_Learning
 .vscode/
 .idea
 logs/
+*.model
+
+JODA/data/*
+JODA/experiments
