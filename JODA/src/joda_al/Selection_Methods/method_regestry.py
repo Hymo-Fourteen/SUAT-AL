@@ -1,0 +1,2 @@
+
+LOSS_MODULE_METHODS = ['lloss']

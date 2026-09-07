@@ -1,0 +1,23 @@
+# CUDA 12.8 variant for JODA, tested on Windows + RTX 5060 (Blackwell, sm_120).
+# Install order matters: install this file with the PyTorch CUDA index, e.g.
+#   pip install -r requirements-cuda.txt --extra-index-url https://download.pytorch.org/whl/cu128
+--extra-index-url https://download.pytorch.org/whl/cu128
+
+tensorboard==2.9.1
+protobuf==3.19.6
+scikit-learn==1.0.2
+toma==1.1.0
+matplotlib==3.5.2
+tqdm==4.63.0
+pyro-ppl==1.8.1
+torchmetrics==0.11.0
+cityscapesScripts==2.2.2
+torch==2.7.1+cu128
+torchvision==0.22.1+cu128
+numpy==1.24.4
+pillow==10.4.0
+segmentation-models-pytorch==0.3.3
+mlflow==1.30.0
+setuptools==65.5.0
+PyYAML==6.0.3
+wheel==0.38.4

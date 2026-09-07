@@ -1,0 +1,76 @@
+# Full CIFAR-100 training (standard classification) with ImageNet-pretrained ResNet18.
+# This uses the full 50k train split and 10k test split. num_epochs is per pass;
+# strategy=continuous loads experiments/<folder>/checkpoint.model on later passes.
+training_config:
+  lr: 0.001
+  lr_backbone: 0.001
+  momentum: 0.9
+  wdcay: 0.0005
+  batch_size: 256
+  num_epochs: 3
+  softmax: false
+  optimizer: Adam
+  early_stopping: val_acc
+  patience: 100
+  num_workers: 0
+  cls_weights: null
+  model: Resnet18
+  pretrained: true
+  pretrained_backbone: true
+  aux_loss: false
+  store_predictions: false
+  scheduler:
+    type: poly
+  warm_up: false
+  epoch_start: 0
+  epoch_loss: 100
+  train_loss: false
+  head_loss_features: false
+  new_model_eval: false
+  train_loss_detached: false
+  eval_frequencey: 1
+  loss_func: CrossEntropy
+  coverage_hyper: 0.75
+  coverage_al: incremental
+  surprise_strategy: surprise
+  gain_mode: standard
+  use_gradients: false
+  use_pca: false
+  acl_balancing: true
+  apply_ood_filter: true
+  seperator: metric
+  sep_metric: energy
+experiment_config:
+  method_type: Joda
+  dataset: cifar100
+  order: 1
+  dataset_path: ./data
+  static_configuration: ta
+  store_image: false
+  store_tsne: false
+  strategy: continuous
+  base: Full
+  query_scenario: Full
+  cycles: 10
+  query_size: 2500
+  is_percent: false
+  overlap: 50
+  over_selection: 2.0
+  experiment_folder: joda_cifar100_full
+  root_folder: ./experiments
+  seed: 0
+  image_tag: -1
+  mlflow_name: streamI
+  task: classification
+  engine: pytorch
+  data_scenario: standard
+  ind_classes: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  near_classes: []
+  far_classes: []
+  near_dataset: None
+  far_dataset: random
+  near_ratio: 0.5
+  expanding_th: 100
+  opensetmode: InD
+  plot_ind_ood: false
+  verbosity: 0

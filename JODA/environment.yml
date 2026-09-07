@@ -1,0 +1,9 @@
+# Portable-ish environment definition for JODA.
+# The Python version is fixed because torch 1.13.1 does not support Python 3.11+.
+# Actual Python dependencies are installed from requirements.txt after env creation.
+name: joda
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip

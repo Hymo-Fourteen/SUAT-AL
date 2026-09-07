@@ -1,0 +1,9 @@
+# CUDA test environment for JODA (Windows, RTX 5060 / sm_120 verified).
+# Python 3.10 is used because the original dependency set targets torch 1.13-era APIs.
+# After creating this env, run: pip install -r requirements-cuda.txt
+name: joda-cuda
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip

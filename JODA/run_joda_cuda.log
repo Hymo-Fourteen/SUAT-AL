@@ -1,0 +1,184 @@
+E:\D\dsh-workspace\学校相关\Joint_Out_of_Distribution_Filtering_and_Data_Discovery_Active_Learning\src\joda_al\utils\logging_utils\log_writers.py:43: UserWarning: Logger already initialized
+  warnings.warn("Logger already initialized")
+2026-08-19 16:28:55,897 - sal - INFO - Logger initialized
+2026-08-19 16:28:55,897 - sal - INFO - TensorBoardWriter initialized logging to : ./experiments\tf_board\joda_smoke_test
+2026-08-19 16:28:55,900 - sal - INFO - FileWriter initialized logging to : ./experiments\joda_smoke_test
+2026-08-19 16:28:55,900 - sal - INFO - {'skip_first': False, 'resume': None, 'checkpoint_path': '/src/checkpoint.model', 'only_select': False, 'experiment_folder': 'joda_smoke_test', 'root_folder': './experiments', 'seed': 0, 'image_tag': -1, 'task': 'classification', 'engine': 'pytorch', 'method_type': 'lloss', 'base': 'Pool', 'mlflow_name': 'streamI', 'store_image': False, 'store_tsne': False, 'plot_ind_ood': False, 'verbosity': 0, 'query_scenario': 'Pool', 'cycles': 1, 'query_size': 20, 'is_percent': False, 'full_set': False, 'overlap': 50, 'over_selection': 2.0, 'new_model_eval': False, 'strategy': 'retrain', 'data_scenario': 'standard', 'ind_classes': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 'near_classes': [], 'far_classes': [], 'near_dataset': 'None', 'far_dataset': 'random', 'near_ratio': 0.5, 'expanding_th': 100, 'opensetmode': 'InD', 'dataset': 'cifar10-test', 'order': 1, 'dataset_path': './data', 'size': 'full', 'static_configuration': 'ta', 'lr': 0.001, 'lr_backbone': 0.001, 'momentum': 0.9, 'wdcay': 0.0005, 'batch_size': 32, 'num_epochs': 1, 'softmax': False, 'optimizer': 'Adam', 'early_stopping': 'val_acc', 'patience': 5, 'num_workers': 0, 'cls_weights': None, 'aux_loss': False, 'milestones': [], 'scheduler': {'type': 'poly'}, 'warm_up': False, 'epoch_start': 0, 'epsilon': 0.1, 'eval_frequencey': 1, 'loss_func': 'CrossEntropy', 'alpha': 0.5, 'triplet_margin': 0.5, 'triplet_mode': 'off', 'store_predictions': False, 'ensemble': False, 'ensemble_size': 3, 'ensemble_training': True, 'load_from_checkpoint': '', 'agg_mode': 'mean', 'num_mc_samples': 10, 'args': {}, 'model': 'Resnet18', 'pretrained': False, 'pretrained_backbone': False, 'model_configuration': {}, 'epochs_vaal': 100, 'gcn_dropout_rate': 0.3, 'gcn_lambda_loss': 1.2, 'gcn_hidden_units': 128, 'gcn_s_margin': 0.1, 'gcn_lr': 0.001, 'gcn_graph_type': 'gcn', 'train_loss_detached': False, 'loss_module_lr': -1, 'epoch_loss': 100, 'train_loss': False, 'head_loss_features': False, 'lloss_reg': 0.5, 'margin': 1.0, 'lloss_weight': 1.0, 'lloss_loss_function': 'mse', 'coverage_method': 'NC', 'coverage_hyper': 0.75, 'coverage_al': 'incremental', 'surprise_strategy': 'surprise', 'gain_mode': 'standard', 'use_gradients': False, 'acl_balancing': True, 'use_pca': False, 'seperator': 'metric', 'sep_metric': 'energy', 'layer_selection': '', 'nac_config': './src/joda_al/Config/Selection_Methods/nac/resnet/', 'nac_dataset': 'cifar10', 'sigmoids': {'AdaptiveAvgPool2d-1': 1, 'Sequential-3': 1, 'Sequential-2': 1, 'Sequential-1': 1}, 'apply_ood_filter': True, 'lambda_oe': 0.5, 'prob_cover_delta': 0.25, 'num_flow_warmup': 5, 'num_flow_finetune': 5, 'flow_cross_entropy_weight': 0.0, 'flow_type': 'radial', 'flow_num_layers': 5, 'flow_early_stopping': False, 'flow_all_data': False, 'experiment_path': './experiments\\joda_smoke_test'}
+2026-08-19 16:28:55,902 - sal - INFO - Config is: { 'acl_balancing': True,
+  'agg_mode': 'mean',
+  'alpha': 0.5,
+  'apply_ood_filter': True,
+  'args': {},
+  'aux_loss': False,
+  'base': 'Pool',
+  'batch_size': 32,
+  'checkpoint_path': '/src/checkpoint.model',
+  'cls_weights': None,
+  'coverage_al': 'incremental',
+  'coverage_hyper': 0.75,
+  'coverage_method': 'NC',
+  'cycles': 1,
+  'data_scenario': 'standard',
+  'dataset': 'cifar10-test',
+  'dataset_path': './data',
+  'early_stopping': 'val_acc',
+  'engine': 'pytorch',
+  'ensemble': False,
+  'ensemble_size': 3,
+  'ensemble_training': True,
+  'epoch_loss': 100,
+  'epoch_start': 0,
+  'epochs_vaal': 100,
+  'epsilon': 0.1,
+  'eval_frequencey': 1,
+  'expanding_th': 100,
+  'experiment_folder': 'joda_smoke_test',
+  'experiment_path': './experiments\\joda_smoke_test',
+  'far_classes': [],
+  'far_dataset': 'random',
+  'flow_all_data': False,
+  'flow_cross_entropy_weight': 0.0,
+  'flow_early_stopping': False,
+  'flow_num_layers': 5,
+  'flow_type': 'radial',
+  'full_set': False,
+  'gain_mode': 'standard',
+  'gcn_dropout_rate': 0.3,
+  'gcn_graph_type': 'gcn',
+  'gcn_hidden_units': 128,
+  'gcn_lambda_loss': 1.2,
+  'gcn_lr': 0.001,
+  'gcn_s_margin': 0.1,
+  'head_loss_features': False,
+  'image_tag': -1,
+  'ind_classes': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  'is_percent': False,
+  'lambda_oe': 0.5,
+  'layer_selection': '',
+  'lloss_loss_function': 'mse',
+  'lloss_reg': 0.5,
+  'lloss_weight': 1.0,
+  'load_from_checkpoint': '',
+  'loss_func': 'CrossEntropy',
+  'loss_module_lr': -1,
+  'lr': 0.001,
+  'lr_backbone': 0.001,
+  'margin': 1.0,
+  'method_type': 'lloss',
+  'milestones': [],
+  'mlflow_name': 'streamI',
+  'model': 'Resnet18',
+  'model_configuration': {},
+  'momentum': 0.9,
+  'nac_config': './src/joda_al/Config/Selection_Methods/nac/resnet/',
+  'nac_dataset': 'cifar10',
+  'near_classes': [],
+  'near_dataset': 'None',
+  'near_ratio': 0.5,
+  'new_model_eval': False,
+  'num_epochs': 1,
+  'num_flow_finetune': 5,
+  'num_flow_warmup': 5,
+  'num_mc_samples': 10,
+  'num_workers': 0,
+  'only_select': False,
+  'opensetmode': 'InD',
+  'optimizer': 'Adam',
+  'order': 1,
+  'over_selection': 2.0,
+  'overlap': 50,
+  'patience': 5,
+  'plot_ind_ood': False,
+  'pretrained': False,
+  'pretrained_backbone': False,
+  'prob_cover_delta': 0.25,
+  'query_scenario': 'Pool',
+  'query_size': 20,
+  'resume': None,
+  'root_folder': './experiments',
+  'scheduler': {'type': 'poly'},
+  'seed': 0,
+  'sep_metric': 'energy',
+  'seperator': 'metric',
+  'sigmoids': { 'AdaptiveAvgPool2d-1': 1,
+                'Sequential-1': 1,
+                'Sequential-2': 1,
+                'Sequential-3': 1},
+  'size': 'full',
+  'skip_first': False,
+  'softmax': False,
+  'static_configuration': 'ta',
+  'store_image': False,
+  'store_predictions': False,
+  'store_tsne': False,
+  'strategy': 'retrain',
+  'surprise_strategy': 'surprise',
+  'task': 'classification',
+  'train_loss': False,
+  'train_loss_detached': False,
+  'triplet_margin': 0.5,
+  'triplet_mode': 'off',
+  'use_gradients': False,
+  'use_pca': False,
+  'verbosity': 0,
+  'warm_up': False,
+  'wdcay': 0.0005}
+
+2026-08-19 16:28:55,906 - sal - INFO - Load Dataset
+2026-08-19 16:28:57,727 - sal - INFO - Cycles: 0/1
+2026-08-19 16:28:57,733 - sal - INFO - <class 'joda_al.data_loaders.dataset_lib.PropertySubset'>
+2026-08-19 16:28:58,553 - sal - INFO - Creating New Model
+2026-08-19 16:28:58,553 - sal - INFO - 100
+2026-08-19 16:28:58,554 - sal - INFO - Start Training
+Warning: Could not import 'patches' for 3DDet. Some functionality may be unavailable.
+Dataset: cifar10-test
+Method type:Joda
+Cycle type:Pool
+Logger not initialized, initializing print logger
+cuda:0
+  0%|          | 0/1 [00:00<?, ?Epochs/s]E:\A\Anaconda\miniconda3\envs\joda-cuda\lib\site-packages\sklearn\metrics\_classification.py:1318: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 in labels with no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+E:\A\Anaconda\miniconda3\envs\joda-cuda\lib\site-packages\sklearn\metrics\_classification.py:1318: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 in labels with no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+  0%|          | 0/1 [00:05<?, ?Epochs/s, val acc: 0.180000 f1: 0.126392 val loss: 2.4088692665100098  loss:1.8723931312561035 P:0/5]2026-08-19 16:29:04,094 - sal - INFO - {'loss': 1.8723931312561035, 'modLoss': None}
+2026-08-19 16:29:04,094 - sal - INFO - {'loss': tensor(2.4089), 'modLoss': None}
+100%|██████████| 1/1 [00:05<00:00,  5.54s/Epochs, val acc: 0.180000 f1: 0.126392 val loss: 2.4088692665100098  loss:1.8723931312561035 P:0/5]100%|██████████| 1/1 [00:05<00:00,  5.54s/Epochs, val acc: 0.180000 f1: 0.126392 val loss: 2.4088692665100098  loss:1.8723931312561035 P:0/5]
+2026-08-19 16:29:04,099 - sal - INFO - Training Done
+E:\A\Anaconda\miniconda3\envs\joda-cuda\lib\site-packages\sklearn\metrics\_classification.py:1318: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 in labels with no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+2026-08-19 16:29:07,227 - sal - INFO - Test Acc 0.1799
+2026-08-19 16:29:07,227 - sal - INFO - Test F1 0.1277344263625065
+2026-08-19 16:29:07,234 - sal - INFO - Method used:
+Joda
+2026-08-19 16:29:07,261 - sal - INFO - Building Coverage..
+2026-08-19 16:29:07,274 - sal - INFO - feature_num:  1482
+2026-08-19 16:29:07,274 - sal - INFO - Building SA...
+Check if 1 samples should be compared for loss
+  0%|          | 0/32 [00:00<?, ?it/s]  3%|▎         | 1/32 [00:00<00:04,  6.90it/s] 16%|█▌        | 5/32 [00:00<00:01, 20.88it/s] 28%|██▊       | 9/32 [00:00<00:00, 26.08it/s] 41%|████      | 13/32 [00:00<00:00, 28.82it/s] 53%|█████▎    | 17/32 [00:00<00:00, 30.50it/s] 66%|██████▌   | 21/32 [00:00<00:00, 31.36it/s] 78%|███████▊  | 25/32 [00:00<00:00, 31.94it/s] 91%|█████████ | 29/32 [00:00<00:00, 32.13it/s]100%|██████████| 32/32 [00:01<00:00, 29.55it/s]
+2026-08-19 16:29:08,363 - sal - INFO - Computing initial Coverage..
+  0%|          | 0/32 [00:00<?, ?it/s] 16%|█▌        | 5/32 [00:00<00:00, 41.46it/s] 31%|███▏      | 10/32 [00:00<00:00, 41.79it/s] 47%|████▋     | 15/32 [00:00<00:00, 42.88it/s] 62%|██████▎   | 20/32 [00:00<00:00, 42.45it/s] 78%|███████▊  | 25/32 [00:00<00:00, 42.68it/s] 94%|█████████▍| 30/32 [00:00<00:00, 43.20it/s]100%|██████████| 32/32 [00:00<00:00, 42.91it/s]
+0it [00:00, ?it/s]1it [00:00,  2.11it/s]2it [00:00,  2.45it/s]3it [00:01,  2.57it/s]4it [00:01,  2.63it/s]5it [00:01,  2.68it/s]6it [00:02,  2.71it/s]7it [00:02,  2.72it/s]8it [00:02,  2.90it/s]8it [00:02,  2.71it/s]
+2026-08-19 16:29:12,076 - sal - INFO - Finding top coverage samples..
+  0%|          | 0/32 [00:00<?, ?it/s] 12%|█▎        | 4/32 [00:00<00:00, 38.98it/s] 28%|██▊       | 9/32 [00:00<00:00, 41.09it/s] 44%|████▍     | 14/32 [00:00<00:00, 41.52it/s] 59%|█████▉    | 19/32 [00:00<00:00, 41.69it/s] 75%|███████▌  | 24/32 [00:00<00:00, 41.55it/s] 91%|█████████ | 29/32 [00:00<00:00, 41.94it/s]100%|██████████| 32/32 [00:00<00:00, 41.88it/s]
+0it [00:00, ?it/s]1it [00:00,  2.63it/s]2it [00:00,  2.74it/s]3it [00:01,  2.77it/s]4it [00:01,  2.78it/s]5it [00:01,  2.78it/s]6it [00:02,  2.80it/s]7it [00:02,  2.80it/s]8it [00:02,  2.98it/s]8it [00:02,  2.85it/s]
+2026-08-19 16:29:15,650 - sal - INFO - max cov-gain selected: 8.841352462768555
+2026-08-19 16:29:15,650 - sal - INFO - min cov-gain selected: 4.1897196769714355
+2026-08-19 16:29:15,650 - sal - INFO - Current Coverage: 0
+2026-08-19 16:29:16,295 - sal - INFO - <class 'joda_al.data_loaders.dataset_lib.PropertySubset'>
+2026-08-19 16:29:16,383 - sal - INFO - Creating New Model
+2026-08-19 16:29:16,383 - sal - INFO - 100
+2026-08-19 16:29:16,383 - sal - INFO - Start Training
+  0%|          | 0/1 [00:00<?, ?Epochs/s]E:\A\Anaconda\miniconda3\envs\joda-cuda\lib\site-packages\sklearn\metrics\_classification.py:1318: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 in labels with no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+E:\A\Anaconda\miniconda3\envs\joda-cuda\lib\site-packages\sklearn\metrics\_classification.py:1318: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 in labels with no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+  0%|          | 0/1 [00:04<?, ?Epochs/s, val acc: 0.180200 f1: 0.128601 val loss: 3.2378315925598145  loss:1.652271032333374 P:0/5]2026-08-19 16:29:21,339 - sal - INFO - {'loss': 1.652271032333374, 'modLoss': None}
+2026-08-19 16:29:21,339 - sal - INFO - {'loss': tensor(3.2378), 'modLoss': None}
+100%|██████████| 1/1 [00:04<00:00,  4.96s/Epochs, val acc: 0.180200 f1: 0.128601 val loss: 3.2378315925598145  loss:1.652271032333374 P:0/5]100%|██████████| 1/1 [00:04<00:00,  4.96s/Epochs, val acc: 0.180200 f1: 0.128601 val loss: 3.2378315925598145  loss:1.652271032333374 P:0/5]
+2026-08-19 16:29:21,343 - sal - INFO - Training Done
+E:\A\Anaconda\miniconda3\envs\joda-cuda\lib\site-packages\sklearn\metrics\_classification.py:1318: UndefinedMetricWarning: Precision is ill-defined and being set to 0.0 in labels with no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+2026-08-19 16:29:24,831 - sal - INFO - Test Acc 0.1862
+2026-08-19 16:29:24,831 - sal - INFO - Test F1 0.13194341906079235
+2026-08-19 16:29:24,838 - sal - INFO - deinitialize Logger
+Check if 1 samples should be compared for loss

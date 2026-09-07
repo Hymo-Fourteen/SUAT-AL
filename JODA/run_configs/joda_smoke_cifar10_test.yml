@@ -1,0 +1,75 @@
+# Minimal smoke-test configuration for JODA on Windows CPU.
+# Uses the tiny cifar10-test split: 1000 labeled + 1000 unlabeled pool samples.
+training_config:
+  lr: 0.001
+  momentum: 0.9
+  wdcay: 0.0005
+  batch_size: 32
+  num_epochs: 1
+  softmax: false
+  optimizer: Adam
+  early_stopping: val_acc
+  patience: 5
+  num_workers: 0
+  cls_weights: null
+  model: Resnet18
+  pretrained: false
+  pretrained_backbone: false
+  aux_loss: false
+  store_predictions: false
+  scheduler:
+    type: poly
+  warm_up: false
+  epoch_start: 0
+  epoch_loss: 100
+  train_loss: false
+  head_loss_features: false
+  new_model_eval: false
+  train_loss_detached: false
+  eval_frequencey: 1
+  loss_func: CrossEntropy
+  coverage_hyper: 0.75
+  coverage_al: incremental
+  surprise_strategy: surprise
+  gain_mode: standard
+  use_gradients: false
+  use_pca: false
+  acl_balancing: true
+  apply_ood_filter: true
+  seperator: metric
+  sep_metric: energy
+  lambda_oe: 0.5
+experiment_config:
+  method_type: Joda
+  dataset: cifar10-test
+  order: 1
+  dataset_path: ./data
+  static_configuration: ta
+  store_image: false
+  store_tsne: false
+  strategy: retrain
+  base: Pool
+  query_scenario: Pool
+  cycles: 1
+  query_size: 20
+  is_percent: false
+  overlap: 50
+  over_selection: 2.0
+  experiment_folder: joda_smoke_test
+  root_folder: ./experiments
+  seed: 0
+  image_tag: -1
+  mlflow_name: streamI
+  task: classification
+  engine: pytorch
+  data_scenario: standard
+  ind_classes: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  near_classes: []
+  far_classes: []
+  near_dataset: None
+  far_dataset: random
+  near_ratio: 0.5
+  expanding_th: 100
+  opensetmode: InD
+  plot_ind_ood: false
+  verbosity: 0

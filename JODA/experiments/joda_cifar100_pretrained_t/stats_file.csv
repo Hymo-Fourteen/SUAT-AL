@@ -1,0 +1,2 @@
+loss,val_acc,test_acc,test_f1,valued_unlabeled_data,selected_idx
+[2.8445706367492676],[0.2952],0.5488,0.5473975220848414,[],[]

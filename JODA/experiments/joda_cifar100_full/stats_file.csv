@@ -1,0 +1,18 @@
+loss,val_acc,test_acc,test_f1,valued_unlabeled_data,selected_idx
+"[3.3905038833618164, 2.6195414066314697, 2.3689374923706055]","[0.1462, 0.2562, 0.3622]",0.365,0.3490405858766114,[],[]
+loss,val_acc,test_acc,test_f1,valued_unlabeled_data,selected_idx
+"[2.149411201477051, 1.6610398292541504, 1.793125867843628]","[0.3548, 0.454, 0.4052]",0.4551,0.4438302885156826,[],[]
+loss,val_acc,test_acc,test_f1,valued_unlabeled_data,selected_idx
+"[1.7177858352661133, 1.2778398990631104, 1.460530400276184]","[0.4208, 0.4854, 0.4604]",0.4871,0.47666227981380027,[],[]
+loss,val_acc,test_acc,test_f1,valued_unlabeled_data,selected_idx
+"[1.3987064361572266, 1.0040408372879028, 1.2590103149414062]","[0.4318, 0.4692, 0.4968]",0.5034,0.5007325039860915,[],[]
+loss,val_acc,test_acc,test_f1,valued_unlabeled_data,selected_idx
+"[0.8920515775680542, 0.7251033186912537, 0.7890267372131348]","[0.4492, 0.4606, 0.4834]",0.4791,0.47502315958420316,[],[]
+loss,val_acc,test_acc,test_f1,valued_unlabeled_data,selected_idx
+[0.21068628132343292],[0.569],0.5806,0.5812598851713439,[],[]
+loss,val_acc,test_acc,test_f1,valued_unlabeled_data,selected_idx
+[0.019218241795897484],[0.5776],0.5809,0.5808035894208793,[],[]
+loss,val_acc,test_acc,test_f1,valued_unlabeled_data,selected_idx
+[0.012295304797589779],[0.578],0.5808,0.5802262650233113,[],[]
+loss,val_acc,test_acc,test_f1,valued_unlabeled_data,selected_idx
+[0.009967083111405373],[0.575],0.5809,0.5802216454200522,[],[]

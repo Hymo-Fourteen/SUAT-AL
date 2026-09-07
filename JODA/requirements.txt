@@ -1,0 +1,21 @@
+# JODA runnable dependency set (Windows + Python 3.10 smoke-tested).
+# Original file had: pytorch==1.13.1 (wrong PyPI package name) and omitted
+# several runtime dependencies. See JODA_使用说明.md for details.
+tensorboard==2.9.1
+protobuf==3.19.6
+scikit-learn==1.0.2
+toma==1.1.0
+matplotlib==3.5.2
+tqdm==4.63.0
+pyro-ppl==1.8.1
+torchmetrics==0.11.0
+cityscapesScripts==2.2.2
+torch==1.13.1
+torchvision==0.14.1
+numpy==1.24.4
+pillow==10.4.0
+segmentation-models-pytorch==0.3.3
+mlflow==1.30.0
+setuptools==65.5.0
+PyYAML==6.0.3
+wheel==0.38.4
