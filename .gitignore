@@ -1,15 +1,28 @@
+# === 编辑器/系统 ===
 .obsidian
-JODA代码库理解
-Joint_Out_of_Distribution_Filtering_and_Data_Discovery_Active_Learning
-
-*/__pycache__/*
-*/__cache__/*
-*.pyc
-*.ipynb_checkpoints
 .vscode/
 .idea
+*.ipynb_checkpoints
+
+# === Python 缓存 ===
+__pycache__/
+__cache__/
+*.pyc
+
+# === 日志和模型 ===
 logs/
 *.model
 
-JODA/data/*
-JODA/experiments
+# === 数据集（大文件） ===
+*.tar.gz
+JODA/data/**/train
+JODA/data/**/*.tar.gz
+
+# === 实验结果（检查点） ===
+JODA/experiments/
+# 如果你只想忽略 experiments 里的大文件但保留目录结构，用下面这行代替上面那行：
+# JODA/experiments/**/checkpoint.model
+
+# === 其他文档/笔记 ===
+JODA代码库理解/
+Joint_Out_of_Distribution_Filtering_and_Data_Discovery_Active_Learning/
