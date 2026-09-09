@@ -17,6 +17,7 @@ logs/
 *.tar.gz
 JODA/data/**/train
 JODA/data/**/*.tar.gz
+data
 
 # === 实验结果（检查点） ===
 JODA/experiments/
