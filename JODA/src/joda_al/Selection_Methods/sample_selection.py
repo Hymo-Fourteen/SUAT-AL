@@ -31,7 +31,12 @@ def factory_query(model: CompoundModel, method: str, dataset_handler: DataSetHan
     :return: Tuple containing pool values and list of selected indices.
     """
     method=handle_loss_learning_extension(method)
-    pool_values, indices = SelectionMethodFactor().create_or_get_query_method(method,**(config.get("method", {}).get("args", {}) if isinstance(config, dict) else getattr(config, "method", {}).get("args", {}))).query(model, handler, dataset_handler,
+    # ``config`` is normally the merged training/experiment dict. Method
+    # arguments live under ``method.args``; some configs pass a flat ``args``.
+    method_args = config.get("method", {}).get("args", {}) if isinstance(config, dict) else getattr(config, "method", {}).get("args", {})
+    if not method_args and isinstance(config, dict):
+        method_args = config.get("args", {})
+    pool_values, indices = SelectionMethodFactor().create_or_get_query_method(method,**method_args).query(model, handler, dataset_handler,
               config, query_size, device,
               labeled_idx_set,
               unlabeled_idx_set)

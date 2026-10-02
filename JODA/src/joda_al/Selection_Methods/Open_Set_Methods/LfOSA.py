@@ -39,7 +39,7 @@ class LfOSA(OpenSetQueryMethod):
 
         for batch_idx, (data, labels) in enumerate(unlabeledloader):
             if True:
-                data, labels = data.cuda(), labels.cuda()
+                data, labels = data.to(device), labels.to(device)
             outputs, _, _ = models["module"](data)
             index = (int(batch_idx * unlabeledloader.batch_size) + torch.arange(len(data))).tolist()
             queryIndex += index

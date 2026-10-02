@@ -16,6 +16,10 @@ from joda_al.models.loss_functions import LOSS_FUNCTIONS, loss_pred_loss
 from joda_al.task_supports.pytorch.TaskHandler import DefaultTaskHandler
 from joda_al.utils.logging_utils.log_writers import gl_info
 from joda_al.utils.method_utils import is_loss_learning
+from joda_al.utils.pipeline_debug import (
+    emit, enabled, label_summary, register_leaf_hooks, remove_hooks,
+    selected_epoch, tensor_summary,
+)
 
 
 class ClassificationHandler(DefaultTaskHandler):
@@ -79,7 +83,9 @@ class ClassificationHandler(DefaultTaskHandler):
         embDim = model.get_embedding_dim()
         model.eval()
         nLab = dataset_config["num_classes"]
-        embedding = np.zeros([len(unlabeled_idx_set), embDim * nLab])
+        embedding = np.zeros(
+            [len(unlabeled_idx_set), embDim * nLab], dtype=np.float32
+        )
         unlabeled_loader = DataLoader(
             dataset,
             batch_size=training_config["batch_size"],
@@ -91,7 +97,7 @@ class ClassificationHandler(DefaultTaskHandler):
                 x, y = x.cuda(), y.cuda()
                 outpred, emb, _ = model(x)
                 emb = emb.cpu().numpy()
-                outpred = outpred.cpu().numpy()
+                outpred = torch.softmax(outpred, dim=1).cpu().numpy()
                 maxInds = np.argmax(outpred, 1)
                 for j in range(len(y)):
                     b_idx = training_config["batch_size"] * idx + j
@@ -288,13 +294,27 @@ class ClassificationHandler(DefaultTaskHandler):
             all_labels = torch.tensor([], device=device)
 
         with torch.no_grad():
-            for (inputs, labels) in tqdm(
+            for batch_index, (inputs, labels) in enumerate(tqdm(
                 dataloader, leave=False, total=len(dataloader), desc='Iterations',
                 unit="Batch", position=1, disable=get_global_verbosity()
-            ):
+            )):
                 with cuda_ctx:
                     inputs = inputs.to(device)
                     labels = labels.to(device)
+                debug_batch = (
+                    enabled(config) and batch_index == 0
+                    and (mode == "test" or selected_epoch(config, config.get("_debug_current_epoch")))
+                )
+                debug_context = (f"evaluate mode={mode} cycle={cycle_num} "
+                                 f"epoch={config.get('_debug_current_epoch')} batch=0")
+                hooks = []
+                if debug_batch:
+                    emit(f"{debug_context} input={tensor_summary(inputs)}")
+                    emit(f"{debug_context} labels="
+                         f"{label_summary(labels, dataset_config.get('num_classes'))}")
+                    hooks = register_leaf_hooks(
+                        models["task"], debug_context,
+                        int(config.get("debug_max_modules", 200)))
                 if config["loss_func"] in ["OODCrossEntropy", "OpenCrossEntropy", "OutlierExposure", "EnergyExposure"]:
                     loss, module_loss, preds, labels = cls.train_step_OpenSet(
                         models, method, criterion, inputs, labels, mode="eval"
@@ -305,6 +325,12 @@ class ClassificationHandler(DefaultTaskHandler):
                     loss, module_loss, preds = cls.train_step(
                         models, method, criterion, inputs, labels, 0, config, epoch_loss=config["epoch_loss"]
                     )
+
+                if debug_batch:
+                    remove_hooks(hooks)
+                    emit(f"{debug_context} predictions="
+                         f"{label_summary(preds, dataset_config.get('num_classes'))}")
+                    emit(f"{debug_context} loss={tensor_summary(loss)}")
 
                 loss_list.append(loss.cpu())
                 if module_loss is not None:
@@ -365,4 +391,3 @@ class ClassificationHandler(DefaultTaskHandler):
         else:
             mod_loss = None
         return metric, sum(loss_list) / len(loss_list), mod_loss
-

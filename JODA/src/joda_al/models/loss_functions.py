@@ -233,20 +233,20 @@ class OODCrossEntropy(nn.Module):
         #farOOD_indices = (labels == -2).nonzero(as_tuple=True)[0]
         if mode == "train":
             if len(inD_indices) > 0 or len(modified_ood_indices) > 0:
-                detector_outputs, detector_features, _ = model["module"](inputs[torch.cat((inD_indices, modified_ood_indices))].to(self.device))
+                detector_outputs, detector_features, _ = model["module"](inputs[torch.cat((inD_indices, modified_ood_indices))])
                 detector_outputs = detector_outputs / 0.5
                 detector_xent = self.criterion_xent(detector_outputs, pseudo_labels[torch.cat((inD_indices, modified_ood_indices))])
                 #detector_cent = self.criterion_cent(detector_features, labels)
                 #detector_cent *= self.weight_cent
                 detector_loss = detector_xent
             else:
-                detector_loss = None
+                detector_loss = next(model["module"].parameters()).sum() * 0.0
 
         else:
             detector_loss = None
 
 
-        classifier_outputs, classifier_features, _ = model["task"](inputs.to(self.device))
+        classifier_outputs, classifier_features, _ = model["task"](inputs)
 
         if len(inD_indices) > 0:
             classifier_xent = self.criterion_xent(classifier_outputs[inD_indices], labels[inD_indices])
@@ -255,7 +255,7 @@ class OODCrossEntropy(nn.Module):
 
             classifier_loss = classifier_xent
         else:
-            classifier_loss = torch.tensor(0.0).to(self.device)
+            classifier_loss = classifier_outputs.sum() * 0.0
         return classifier_loss, detector_loss, classifier_outputs[inD_indices], labels[inD_indices]
 
 class OpenCrossEntropy(nn.Module):
@@ -330,11 +330,11 @@ class OutlierExposure(nn.Module):
                 ood_indices = (labels >= self.num_classes).nonzero(as_tuple=True)[0]
             elif self.triplet_mode == "triplet":
                 ood_indices = (labels < 0).nonzero(as_tuple=True)[0]
-            loss_oe = -(
-                outputs[ood_indices].mean(1) -
-                torch.logsumexp(outputs[ood_indices], dim=1)).mean()
-            #-(x[len(in_set[0]):].mean(1) - torch.logsumexp(x[len(in_set[0]):], dim=1)).mean()
             if len(ood_indices)> 0:
+                loss_oe = -(
+                    outputs[ood_indices].mean(1) -
+                    torch.logsumexp(outputs[ood_indices], dim=1)).mean()
+                #-(x[len(in_set[0]):].mean(1) - torch.logsumexp(x[len(in_set[0]):], dim=1)).mean()
                 loss += self.lambda_oe * loss_oe
         return loss, loss_oe, outputs[inD_indices], labels[inD_indices]
 

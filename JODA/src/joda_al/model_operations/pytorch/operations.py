@@ -12,6 +12,10 @@ from joda_al.utils.logging_utils.log_writers import gl_info
 from joda_al.utils.method_utils import is_loss_learning, is_method_of
 from joda_al.task_supports.task_handler_factory import get_task_handler
 from joda_al.utils.logging_utils.training_logger import global_write_scalar, global_write_histogram
+from joda_al.utils.pipeline_debug import (
+    emit, enabled, label_summary, model_norms, optimizer_summary,
+    register_leaf_hooks, remove_hooks, selected_epoch, tensor_summary,
+)
 
 EARLY_STOPPING_METRICS = ["val_acc", "val_loss", "val_mIoU", "val_mAP", "val_MIoU"]
 
@@ -53,7 +57,7 @@ def train_epoch(models, method, task, criterion, optimizers, dataloader, trainin
                 param_group['lr'] = param_group['lr'] * 10
     ######
 
-    with torch.autograd.set_detect_anomaly(True):
+    with torch.autograd.set_detect_anomaly(training_config.get("detect_anomaly", False)):
         with tqdm(dataloader, leave=False, total=num_data, desc='Iterations', unit="Batch", position=1, disable=get_global_verbosity()) as iterator:
             for data in iterator:
                 iteration+=1
@@ -68,6 +72,20 @@ def train_epoch(models, method, task, criterion, optimizers, dataloader, trainin
                     else:
                         labels = data[1].to(device)
 
+                debug_batch = (enabled(training_config) and iteration == 1
+                               and selected_epoch(training_config, epoch))
+                debug_context = (f"train cycle={training_config.get('_debug_cycle_num')} "
+                                 f"epoch={epoch} batch=0")
+                hooks = []
+                if debug_batch:
+                    emit(f"{debug_context} input={tensor_summary(inputs)}")
+                    emit(f"{debug_context} labels="
+                         f"{label_summary(labels, training_config.get('_debug_num_classes'))}")
+                    emit(f"{debug_context} optimizer_before={optimizer_summary(optimizers)}")
+                    hooks = register_leaf_hooks(
+                        models["task"], debug_context,
+                        int(training_config.get("debug_max_modules", 200)))
+
                 # iters += 1 count global number of iterations
                 #print("Pre",startt-time.time())
                 for _, optimizer in optimizers.items():
@@ -78,12 +96,12 @@ def train_epoch(models, method, task, criterion, optimizers, dataloader, trainin
                         optimizer.zero_grad()
 
                 if training_config["loss_func"] == "OODCrossEntropy":
-                    loss, loss_module, _, _ = train_step(models, method, criterion, inputs, labels)
+                    loss, loss_module, predictions, returned_labels = train_step(models, method, criterion, inputs, labels)
                     loss.backward()  # this is not a combined loss....
                     loss_module.backward()
 
                 elif training_config["loss_func"] in ["OutlierExposure","EnergyExposure","OpenCrossEntropy"]:
-                    loss, loss_module, _, _ = train_step(models, method, criterion, inputs, labels)
+                    loss, loss_module, predictions, returned_labels = train_step(models, method, criterion, inputs, labels)
 
                     if isinstance(loss,list):
                         for l in loss:
@@ -93,8 +111,17 @@ def train_epoch(models, method, task, criterion, optimizers, dataloader, trainin
                     else:
                         loss.backward()
                 else:
-                    loss, loss_module, _ = train_step(models, method, criterion, inputs, labels, epoch, training_config, epoch_loss)
+                    loss, loss_module, predictions = train_step(models, method, criterion, inputs, labels, epoch, training_config, epoch_loss)
+                    returned_labels = labels
                     loss.backward() # this is a combined loss....
+
+                if debug_batch:
+                    remove_hooks(hooks)
+                    emit(f"{debug_context} prediction_or_logits={tensor_summary(predictions)}")
+                    emit(f"{debug_context} returned_labels="
+                         f"{label_summary(returned_labels, training_config.get('_debug_num_classes'))}")
+                    emit(f"{debug_context} loss={tensor_summary(loss)} value={float(loss.detach().cpu())}")
+                    emit(f"{debug_context} norms_after_backward={model_norms(models['task'])}")
 
 
                 for _, optimizer in optimizers.items():
@@ -110,17 +137,24 @@ def train_epoch(models, method, task, criterion, optimizers, dataloader, trainin
                     else:
                         scheduler.step()
 
-            iterator.set_postfix_str(f"loss:{str(loss.detach().data.cpu().numpy())}")
-            mean_loss.append(loss.detach().data.cpu().numpy())
-            #if is_loss_learning(method):
+                if debug_batch:
+                    emit(f"{debug_context} optimizer_after={optimizer_summary(optimizers)}")
+                    emit(f"{debug_context} norms_after_step={model_norms(models['task'])}")
 
-            if loss_module is None:
-                print("Check if 1 samples should be compared for loss")
-            else:
-                mean_module_loss.append(loss_module.detach().data.cpu().numpy())
-                global_write_scalar('LossMod/Iteration/train', loss_module.detach().data.cpu().numpy(), num_data*epoch+iteration*training_config["batch_size"])
-
-            global_write_scalar('Loss/Iteration/train', loss.detach().data.cpu().numpy(), num_data*epoch+iteration*training_config["batch_size"])
+                loss_value = loss.detach().cpu().item()
+                mean_loss.append(loss_value)
+                iterator.set_postfix_str(f"loss:{loss_value}")
+                if loss_module is not None:
+                    module_loss_value = loss_module.detach().cpu().item()
+                    mean_module_loss.append(module_loss_value)
+                    global_write_scalar(
+                        'LossMod/Iteration/train', module_loss_value,
+                        num_data * epoch + iteration,
+                    )
+                global_write_scalar(
+                    'Loss/Iteration/train', loss_value,
+                    num_data * epoch + iteration,
+                )
 
         if len(mean_module_loss) > 0:
         #if is_loss_learning(method):
@@ -206,6 +240,9 @@ def train_model(models, method, task, criterion, optimizers, lr_schedulers, trai
     gl_info("Start Training")
     with tqdm(range(config["num_epochs"]), leave=True, unit="Epochs", position=0) as epochs:
         for epoch in epochs:
+            config["_debug_current_epoch"] = epoch
+            config["_debug_cycle_num"] = cycle_num
+            config["_debug_num_classes"] = dataset_config.get("num_classes")
             models["task"].train()
             if "module" in models:
                 models['module'].train()
@@ -335,7 +372,7 @@ def train_epoch_loss(models, method, task, criterion, optimizers, dataloader, tr
                 labels = data[1].to(device)
 
             # iters += 1 count global number of iterations
-            with torch.autograd.set_detect_anomaly(True):
+            with torch.autograd.set_detect_anomaly(training_config.get("detect_anomaly", False)):
                 optimizers['module'].zero_grad()
                 loss, loss_module, _ = train_step(models, method, criterion, inputs, labels, epoch, training_config, epoch_loss=0)
 

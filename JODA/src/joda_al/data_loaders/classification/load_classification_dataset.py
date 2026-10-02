@@ -1,7 +1,9 @@
 import itertools
 
+import torch
 from torch.utils.data import Dataset
 from torchvision import transforms as T
+from torchvision.transforms import functional as TF
 from torchvision.datasets import CIFAR10, CIFAR100, FashionMNIST, SVHN, MNIST
 import os
 from typing import Dict, List, Tuple
@@ -13,6 +15,7 @@ from joda_al.data_loaders.classification.classic_dataset import Cacheable_Places
     Cacheable_Places365_Limited, MNISTt2, Places365_ImageListDatset, UnbalancedCIFAR100
 from joda_al.data_loaders.classification.tiny_imagenet_dataloader import load_tinyimagenet_pool, \
     TinyImageNet_train
+from joda_al.data_loaders.classification.plankton_dataloader import load_plankton_pool
 from joda_al.defintions import DataUpdateScenario
 from joda_al.data_loaders.classification.ood_detection_datasets import AlteredDataset, NoiseDataset, \
     OpenOODDataset, OODDataset
@@ -26,10 +29,96 @@ from joda_al.Pytorch_Extentions.dataset_extentions import TransformDataset
 from joda_al.utils.logging_utils.log_writers import gl_error
 
 
+class NormalizedCIFARTrainTransform:
+    """Apply the standard CIFAR crop/flip to an already normalized tensor.
+
+    CIFAR samples are normalized by the underlying torchvision dataset before
+    the active-learning wrapper applies training augmentation.  Padding with
+    ``-mean / std`` makes this operation equivalent to zero-padding the raw
+    image before normalization, which is the ordering used by the paper's
+    reference training recipe.  Far-OOD tensors use zero padding because they
+    are represented directly in model-input space and have label ``-1``.
+    """
+
+    def __init__(self, mean, std, size=32, padding=4, flip_probability=0.5):
+        self.size = (size, size)
+        self.padding = padding
+        self.flip_probability = flip_probability
+        self.normalized_zero = torch.tensor(
+            [-channel_mean / channel_std for channel_mean, channel_std in zip(mean, std)],
+            dtype=torch.float32,
+        ).view(-1, 1, 1)
+
+    def __call__(self, image, target):
+        if not isinstance(image, torch.Tensor) or image.ndim != 3:
+            raise TypeError("CIFAR training augmentation expects a CHW tensor")
+
+        channels, height, width = image.shape
+        if int(target) >= 0:
+            fill = self.normalized_zero.to(dtype=image.dtype, device=image.device)
+            padded = fill.expand(
+                channels,
+                height + 2 * self.padding,
+                width + 2 * self.padding,
+            ).clone()
+        else:
+            padded = image.new_zeros(
+                channels,
+                height + 2 * self.padding,
+                width + 2 * self.padding,
+            )
+        padded[:, self.padding:self.padding + height, self.padding:self.padding + width] = image
+
+        top, left, crop_height, crop_width = T.RandomCrop.get_params(padded, self.size)
+        image = TF.crop(padded, top, left, crop_height, crop_width)
+        if torch.rand(()) < self.flip_probability:
+            image = TF.hflip(image)
+        return image, target
+
+
+def _lookup_dataset_transform(dataset_name, transform_map):
+    """Resolve names such as ``cifar100-ta-ta`` to ``cifar100-ta``."""
+    for key in sorted(transform_map, key=len, reverse=True):
+        if dataset_name == key or dataset_name.startswith(f"{key}-"):
+            return transform_map[key]
+    return None
+
+
+class SquarePadResize:
+    """Resize the long edge and pad to a square without deforming specimens."""
+
+    def __init__(self, size, fill=255):
+        self.size = int(size)
+        self.fill = fill
+
+    def __call__(self, image):
+        width, height = TF.get_image_size(image)
+        scale = self.size / max(width, height)
+        resized_width = max(1, int(round(width * scale)))
+        resized_height = max(1, int(round(height * scale)))
+        image = TF.resize(
+            image,
+            [resized_height, resized_width],
+            interpolation=T.InterpolationMode.BICUBIC,
+            antialias=True,
+        )
+        horizontal = self.size - resized_width
+        vertical = self.size - resized_height
+        padding = [
+            horizontal // 2,
+            vertical // 2,
+            horizontal - horizontal // 2,
+            vertical - vertical // 2,
+        ]
+        return TF.pad(image, padding, fill=self.fill)
+
+
 def load_classification_dataset(dataset, config, order=1) -> Tuple[Dataset, List[int], List[int], Dataset, Dataset, Dict, DatasetScenarioConverter]:
     dataset_factory = {
         "A2D2": load_a2d2,
         "TinyImageNet": load_tinyimagenet,
+        "SYKE-ZooScan": load_plankton_pool,
+        "SYKE-IFCB": load_plankton_pool,
         "GTAVS": load_gtavs,
         # IMPORTANT: cifar100 entries must be tested before cifar10 because
         # "cifar100..." also has "cifar10" as a string prefix.
@@ -114,7 +203,7 @@ def split_cifar100(dataset_name):
     elif "ll" in dataset_name:
         label_idx = list(range(1000))
         unlabeled_idx = list(range(1000, 45000))
-        unlabeled_idcs = [list(range(i * 1000, (i + 1) * 1000)) for i in range(1, 44)]
+        unlabeled_idcs = [list(range(i * 1000, (i + 1) * 1000)) for i in range(1, 45)]
         val_indices = list(range(45000, 50000))
     elif "ls" in dataset_name:
         label_idx = list(range(2500))
@@ -124,7 +213,7 @@ def split_cifar100(dataset_name):
     elif "ta" in dataset_name or "ba" in dataset_name:
         label_idx = list(range(2000))
         unlabeled_idx = list(range(2000, 45000))
-        unlabeled_idcs = [list(range(i * 1000, (i + 1) * 1000)) for i in range(2, 44)]
+        unlabeled_idcs = [list(range(i * 1000, (i + 1) * 1000)) for i in range(2, 45)]
         val_indices = list(range(45000, 50000))
     elif "ms" in dataset_name:
         label_idx = list(range(5000))
@@ -443,6 +532,40 @@ def reinit_altered_propertysubset_set(dataset,config,dataset_config):
 
 
 def get_training_transformations_classification(dataset_name):
+    cifar_transforms = {
+        "cifar10-ll": NormalizedCIFARTrainTransform(
+            mean=(0.4914, 0.4822, 0.4465),
+            std=(0.2023, 0.1994, 0.2010),
+        ),
+        "cifar100-ms": NormalizedCIFARTrainTransform(
+            mean=(0.5071, 0.4867, 0.4408),
+            std=(0.2675, 0.2565, 0.2761),
+        ),
+        "cifar100-ta": NormalizedCIFARTrainTransform(
+            mean=(0.5071, 0.4867, 0.4408),
+            std=(0.2675, 0.2565, 0.2761),
+        ),
+        "cifar100-ub-ta": NormalizedCIFARTrainTransform(
+            mean=(0.5071, 0.4867, 0.4408),
+            std=(0.2675, 0.2565, 0.2761),
+        ),
+    }
+    cifar_transform = _lookup_dataset_transform(dataset_name, cifar_transforms)
+    if cifar_transform is not None:
+        return {"transform": None, "transforms": cifar_transform}
+
+    imagenet_mean = (0.485, 0.456, 0.406)
+    imagenet_std = (0.229, 0.224, 0.225)
+    normalized_white = tuple(
+        (1.0 - mean) / std for mean, std in zip(imagenet_mean, imagenet_std)
+    )
+    plankton_train_transform = T.RandomAffine(
+        degrees=(0, 180),
+        translate=(0.0, 0.1),
+        scale=(0.95, 1.05),
+        fill=normalized_white,
+    )
+
     trans_map = {
         "A2D2": None,
         "A2D2M": None,
@@ -464,22 +587,31 @@ def get_training_transformations_classification(dataset_name):
         "nuscenesNR": T.Compose([T.RandomHorizontalFlip(), T.RandomAdjustSharpness(2), T.GaussianBlur(3)]),
         "cityscapesNR": T.Compose([T.RandomHorizontalFlip(), T.RandomVerticalFlip(), T.ColorJitter(0.4, 0.4, 0.4)]),
         "cityscapesER": T.Compose([T.RandomHorizontalFlip(), T.RandomVerticalFlip(), T.ColorJitter(0.4, 0.4, 0.4)]),
-        "cifar10-ll": T.Compose([T.RandomHorizontalFlip(), T.RandomCrop(size=32, padding=4)]),
-        "cifar100-ms": T.Compose([T.RandomHorizontalFlip(), T.RandomCrop(size=32, padding=4)]),
+        # Plain full-data CIFAR100 runs are not covered by the normalized CIFAR
+        # train transforms, so keep an explicit augmentation entry here.
         "cifar100": T.Compose([T.RandomHorizontalFlip(), T.RandomCrop(size=32, padding=4)]),
         "cifar100-standard": T.Compose([T.RandomHorizontalFlip(), T.RandomCrop(size=32, padding=4)]),
-        "cifar100-ta": T.Compose([T.RandomHorizontalFlip(), T.RandomCrop(size=32, padding=4)]),
-        "cifar100-ub-ta": T.Compose([T.RandomHorizontalFlip(), T.RandomCrop(size=32, padding=4)]),
         "TinyImageNet-ta": T.Compose([T.RandomHorizontalFlip(), T.RandomCrop(size=64, padding=4)]),
         "TinyImageNetL-ta": T.Compose(
             [T.Resize((224, 224)), T.RandomHorizontalFlip(), T.RandomCrop(size=224, padding=4)]),
         "TinyImageNet-be": T.Compose([T.RandomHorizontalFlip(), T.RandomResizedCrop(size=64)]),
+        "SYKE-ZooScan-ta": plankton_train_transform,
+        "SYKE-IFCB-ta": plankton_train_transform,
     }
-    trans=trans_map.get(dataset_name, None)
+    trans = _lookup_dataset_transform(dataset_name, trans_map)
     return {"transform":trans,"transforms": None}
 
 
 def get_eval_transformations_classification(dataset_name):
+    plankton_eval_transform = T.Compose([
+        T.Grayscale(num_output_channels=3),
+        SquarePadResize(64, fill=255),
+        T.ToTensor(),
+        T.Normalize(
+            mean=(0.485, 0.456, 0.406),
+            std=(0.229, 0.224, 0.225),
+        ),
+    ])
     trans_map = {
         "A2D2l": T.Resize((144, 240)),
         "A2D2m": T.Resize((72, 120)),
@@ -497,8 +629,10 @@ def get_eval_transformations_classification(dataset_name):
         "GTAVSm": T.Resize((72, 128)),
         "GTAVSmN": T.Resize((72, 128)),
         "TinyImageNetL-ta": T.Resize((224, 224)),
+        "SYKE-ZooScan-ta": plankton_eval_transform,
+        "SYKE-IFCB-ta": plankton_eval_transform,
     }
-    transformation=trans_map.get(dataset_name, None)
+    transformation = _lookup_dataset_transform(dataset_name, trans_map)
     if transformation is None:
         if A2D2_DATASET_NAME in dataset_name:
             if LARGE_IDENTIFIER in dataset_name:
@@ -542,4 +676,3 @@ def set_feature_size(feature_sizes_no_max, feature_size_resnet,feature_sizes_vgg
         "VGG16": feature_sizes_vgg
     }
     return feature_sizes
-

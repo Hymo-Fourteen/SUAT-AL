@@ -5,6 +5,7 @@ from joda_al.data_loaders.data_handler.data_handler import DataSetHandler
 from joda_al.data_loaders.data_handler.data_handler_factory import DataSetHandlerFactory
 from joda_al.data_loaders.dataset_lib import update_means
 from joda_al.data_loaders.load_dataset import load_pool_dataset
+from joda_al.defintions import DataUpdateScenario
 from joda_al.Selection_Methods.sample_selection import factory_query
 from joda_al.task_supports.task_handler_factory import get_task_handler
 from joda_al.utils.logging_utils.Scenario_logger import ScenarioLogger
@@ -126,6 +127,17 @@ class PoolCycle(ActiveLearningCycle):
             if len(unlabeled_idx) == 0:
                 gl_info("Unlabeled Set Empty")
                 break
+
+        # The final model consumes the annotations from the last query.  Apply
+        # the discovery threshold once more so a class that reaches the
+        # threshold in that query is included in this final training round.
+        if config.experiment_config["data_scenario"] == DataUpdateScenario.osal_extending:
+            dh.update_data_pool(cls.data_creator_function)
+            global_write_scalar(
+                "ClassesFound",
+                len(dh.config.experiment_config["ind_classes"]),
+                total_cycles,
+            )
 
         # Last round no selection
         global_write_scalar("Selection/TotalSize", len(label_idx), total_cycles)

@@ -58,7 +58,9 @@ def create_file_argument_parser():
     #used by Julius
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        f"--config-path",
+        "--config-path",
+        "--config_path",
+        dest="config_path",
         type=str,
         required=False,
         help="Optional config loading interface, needs to be either yaml or json",
@@ -90,13 +92,15 @@ def parse_and_validate_config():
         config["experiment_config"],
         config["training_config"],
     )
-    method_validation(experiment_config["method_type"])
+    method_type = experiment_config.get("method_type", training_config.get("method_type"))
+    experiment_config["method_type"] = method_type
+    method_validation(method_type)
     assert (
         experiment_config["dataset"] in ALL_DATASETS
     ), "No dataset %s! Try options %s" % (experiment_config["dataset"], ALL_DATASETS)
     print("Dataset: %s" % experiment_config["dataset"])
     print("Method type:%s" % experiment_config["method_type"])
-    print("Cycle type:%s" % experiment_config["base"])
+    print("Cycle type:%s" % experiment_config.get("query_scenario", experiment_config.get("base")))
     return experiment_config, training_config
 
 
@@ -184,13 +188,14 @@ def parse_file_cli_hierarchy(config_file):
     args, unknown_args = create_argparser(
         remove_default_values=True, defaults_to_keep=["experiment_folder"]
     ).parse_known_args()
-    idx = unknown_args.index("--config-path")
-    del unknown_args[idx]  # del --config-path
+    config_path_arg = "--config-path" if "--config-path" in unknown_args else "--config_path"
+    idx = unknown_args.index(config_path_arg)
+    del unknown_args[idx]  # del config path argument
     del unknown_args[idx]  # del Argument
     arg_config = parse_arg_config(args, unknown_args, filter_None=True)
     # The argument parser keeps experiment_folder as an empty default. Do not
-    # let that empty default overwrite the value coming from the config file.
-    if not arg_config.get("experiment_folder"):
+    # let an unset or empty CLI value overwrite the value from the config file.
+    if "--experiment-folder" not in sys.argv or not arg_config.get("experiment_folder"):
         arg_config.pop("experiment_folder", None)
     # Update Defaults with File Config
     parsed_experiment_config = parsed_config.get("experiment_config", {})

@@ -1,0 +1,22 @@
+{
+  "dataset_root": "/data/xiguo/joda/joda_data/cifar100",
+  "download": false,
+  "num_classes": 100,
+  "train_end": 45000,
+  "val_end": 50000,
+  "mean": [0.5071, 0.4867, 0.4408],
+  "std": [0.2675, 0.2565, 0.2761],
+  "epochs": 200,
+  "batch_size": 128,
+  "num_workers": 4,
+  "learning_rate": 0.1,
+  "momentum": 0.9,
+  "nesterov": false,
+  "weight_decay": 0.0005,
+  "milestones": [60, 120, 160],
+  "gamma": 0.2,
+  "warmup_epochs": 1,
+  "seed": 0,
+  "device": "cuda",
+  "deterministic": true
+}

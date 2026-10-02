@@ -84,8 +84,13 @@ def load_task_dataset(dataset: Dict, task : TaskDef, config : Union[Config,Dict]
             - DatasetFactory: The dataset factory.
     """
     gl_info("Load Dataset")
+    # Classification loaders expect the experiment_config section, while the
+    # segmentation loader still receives the full Config object.
+    experiment_config = (
+        config.experiment_config if hasattr(config, "experiment_config") else config
+    )
     if task == TaskDef.classification:
-        return load_classification_dataset(dataset, config.experiment_config, order)
+        return load_classification_dataset(dataset, experiment_config, order)
     elif task == TaskDef.semanticSegmentation:
         return load_segsem_dataset(dataset, config, order)
     else:
@@ -144,8 +149,14 @@ def load_pool_dataset(config: Union[Dict,ConfigMap]) -> Tuple[Dataset, List[int]
     dataset = {}
     dataset["name"] = config.experiment_config["dataset"]
     dataset["path"] = config.experiment_config["dataset_path"]
-    dataset["static_configuration"]= config.experiment_config["static_configuration"]
-    dataset["dataset_scenario"] = config.experiment_config.get("data_scenario", "standard")
+    dataset["static_configuration"] = config.experiment_config["static_configuration"]
+    dataset["dataset_scenario"] = config.experiment_config.get(
+        "dataset_scenario",
+        config.experiment_config.get(
+            "static_configuration",
+            config.experiment_config.get("data_scenario", "standard"),
+        ),
+    )
     order=config.experiment_config["order"]
     task=config.experiment_config["task"]
     training_pool, label_idx, unlabeled_idcs, validation_set, test_set, dataset_config, factory = load_task_dataset(dataset, task, config, order)
@@ -172,8 +183,14 @@ def load_stream_dataset(config: Union[Dict,ConfigMap]) -> Tuple[Dataset, List[in
     dataset = {}
     dataset["name"] = config.experiment_config["dataset"]
     dataset["path"] = config.experiment_config["dataset_path"]
-    dataset["static_configuration"]= config.experiment_config["static_configuration"]
-    dataset["dataset_scenario"] = config.experiment_config.get("data_scenario", "standard")
+    dataset["static_configuration"] = config.experiment_config["static_configuration"]
+    dataset["dataset_scenario"] = config.experiment_config.get(
+        "dataset_scenario",
+        config.experiment_config.get(
+            "static_configuration",
+            config.experiment_config.get("data_scenario", "standard"),
+        ),
+    )
     order=config.experiment_config["order"]
     task=config.experiment_config["task"]
     training_pool, label_idx, unlabeled_idcs, validation_set, test_set, dataset_config, factory = load_task_dataset(dataset, task, config, order)
@@ -201,8 +218,14 @@ def load_multi_stream_dataset(config: Union[Dict,ConfigMap]) -> Tuple[Dataset, L
     dataset = {}
     dataset["name"] = config.experiment_config["dataset"]
     dataset["path"] = config.experiment_config["dataset_path"]
-    dataset["static_configuration"]= config.experiment_config["static_configuration"]
-    dataset["dataset_scenario"] = config.experiment_config.get("data_scenario", "standard")
+    dataset["static_configuration"] = config.experiment_config["static_configuration"]
+    dataset["dataset_scenario"] = config.experiment_config.get(
+        "dataset_scenario",
+        config.experiment_config.get(
+            "static_configuration",
+            config.experiment_config.get("data_scenario", "standard"),
+        ),
+    )
     order=config.experiment_config["order"]
     task=config.experiment_config["task"]
     overlap=config.experiment_config["overlap"]
@@ -219,6 +242,4 @@ def load_multi_stream_dataset(config: Union[Dict,ConfigMap]) -> Tuple[Dataset, L
     for stream in unlabeled_idcs:
         gl_info(f"Number of agents {len(stream)}, {[len(s) for s in stream]}")
     return training_pool, label_idx, unlabeled_idcs, validation_set, test_set, dataset_config
-
-
 

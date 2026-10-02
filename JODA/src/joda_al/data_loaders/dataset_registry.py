@@ -148,5 +148,6 @@ DETECTION2d_DATASETS=LYFT_DATASETS
 ALL_DATASETS = ["svhn","svhn-ll",'cifar10',"cifar10-ll",'cifar10-test',"cifar10-ms","cifar100-ll","cifar100-test","cifar100-ba","cifar100-ta","cifar100-ub-ta","cifar100-ls","cifar100-ms","cifar100", 'A2D2', 'A2D2B', 'A2D2TE',"A2D2LN","A2D2LE", 'cifar100', "cityscapesN2","cityscapesN", "cityscapesNm", "cityscapesPR", 'nuscenes', 'nuscenesM', "nuscenesN","cityscapes","cityscapesR",
                 "nuscenesNR", 'A2D2M', 'A2D2N', 'A2D2l', 'A2D2m','A2D2lL', 'A2D2mL','A2D2lLN', 'A2D2mLN', 'A2D2lN', 'A2D2mN', 'A2D2mNR', "A2D2E", "A2D2R", "A2D2ER", "A2D2NR", "A2D2R2",
                 "A2D2ER2", "A2D2NR2", "cityscapesNm2","GTAVSmE2","GTAVSmE3",
-                "A2D2NR3","A2D2BNR","Kitti","TinyImageNet","TinyImageNet-ta","TinyImageNet-be", "NuScenes"]+A2D2_DATASETS_CLS+DETECTION2d_DATASETS+DATASETS_CLS+DATASETS_SEM_SEG
+                "A2D2NR3","A2D2BNR","Kitti","TinyImageNet","TinyImageNet-ta","TinyImageNet-be", "NuScenes",
+                "SYKE-ZooScan-ta", "SYKE-IFCB-ta"]+A2D2_DATASETS_CLS+DETECTION2d_DATASETS+DATASETS_CLS+DATASETS_SEM_SEG
 ALL_DATASETS +=GTA_V_STREETS_DATASETS

@@ -62,6 +62,9 @@ class BaldQuery(QueryMethod):
         dataset=dataset_handler.train_pool
         self.num_mc_samples = config.get("num_mc_samples", 10)
         log_probs_N_K_C = self.perform_forwards_passes(unlabeled_loader, config, models, device)
+        corrected_log_probs = torch.log(
+            log_probs_N_K_C.clamp_min(torch.finfo(log_probs_N_K_C.dtype).tiny)
+        )
         if self.method in ["BatchBald", "BatchBaldLight", "BatchBaldLightL"]:
             canidate_batch = get_batchbald_batch(log_probs_N_K_C, batch_size=query_size,
                                                  num_samples=len(unlabeled_idx_set), device=device)
@@ -79,41 +82,41 @@ class BaldQuery(QueryMethod):
             set_indices = [unlabeled_idx_set[i] + 1 for i in indices]
             scores = uncertainty / dt
         elif self.method in ["cBatchBald", "cBatchBaldLight", "cBatchBaldLightL"]:
-            canidate_batch = get_batchbald_batch(torch.log(log_probs_N_K_C), batch_size=query_size,
+            canidate_batch = get_batchbald_batch(corrected_log_probs, batch_size=query_size,
                                                  num_samples=len(unlabeled_idx_set), device=device)
             set_indices = [unlabeled_idx_set[i] for i in canidate_batch.indices]
             scores = canidate_batch.scores
         elif self.method == "cBald":
-            canidate_batch, _ = get_bald_batch(torch.log(log_probs_N_K_C), batch_size=query_size, device=device)
+            canidate_batch, _ = get_bald_batch(corrected_log_probs, batch_size=query_size, device=device)
             set_indices = [unlabeled_idx_set[i] for i in canidate_batch.indices]
             scores = canidate_batch.scores
         elif self.method == "cBaldDt":
-            _, ent_scores = get_bald_batch(torch.log(log_probs_N_K_C), batch_size=query_size, device=device)
+            _, ent_scores = get_bald_batch(corrected_log_probs, batch_size=query_size, device=device)
             uncertainty = np.diff(ent_scores)
             dt = np.abs(np.diff(dataset.timestamps[unlabeled_idx_set]))
             indices = np.argsort(uncertainty / dt)[::-1]
             set_indices = [unlabeled_idx_set[i] + 1 for i in indices]
             scores = uncertainty / dt
         elif self.method == "cBaldDtn":
-            _, ent_scores = get_bald_batch(torch.log(log_probs_N_K_C), batch_size=query_size, device=device)
+            _, ent_scores = get_bald_batch(corrected_log_probs, batch_size=query_size, device=device)
             uncertainty = np.abs(np.diff(ent_scores))
             dt = np.abs(np.diff(dataset.timestamps[unlabeled_idx_set]))
             indices = np.argsort(uncertainty / dt)[::-1]
             set_indices = [unlabeled_idx_set[i] + 1 for i in indices]
             scores = uncertainty / dt
         elif self.method == "cEnt":
-            canidate_batch, _ = get_entropy_batch(torch.log(log_probs_N_K_C), batch_size=query_size, device=device)
+            canidate_batch, _ = get_entropy_batch(corrected_log_probs, batch_size=query_size, device=device)
             set_indices = [unlabeled_idx_set[i] for i in canidate_batch.indices]
             scores = canidate_batch.scores
         elif self.method == "cEntDt":
-            _, ent_scores = get_entropy_batch(torch.log(log_probs_N_K_C), batch_size=query_size, device=device)
+            _, ent_scores = get_entropy_batch(corrected_log_probs, batch_size=query_size, device=device)
             uncertainty = np.diff(ent_scores)
             dt = np.abs(np.diff(dataset.timestamps[unlabeled_idx_set]))
             indices = np.argsort(uncertainty / dt)[::-1]
             set_indices = [unlabeled_idx_set[i] + 1 for i in indices]
             scores = uncertainty / dt
         elif self.method == "cEntDtn":
-            _, ent_scores = get_entropy_batch(torch.log(log_probs_N_K_C), batch_size=query_size, device=device)
+            _, ent_scores = get_entropy_batch(corrected_log_probs, batch_size=query_size, device=device)
             uncertainty = np.abs(np.diff(ent_scores))
             dt = np.abs(np.diff(dataset.timestamps[unlabeled_idx_set]))
             indices = np.argsort(uncertainty / dt)[::-1]
@@ -149,6 +152,9 @@ def query_batch_bald(model, dataset, unlabeled_idx_set, device, training_config,
                         mc_passes.append(torch.softmax(scores,dim=-1))
             sample_predictions.append(torch.stack(mc_passes,1))
         log_probs_N_K_C=torch.cat(sample_predictions, 0)
+        corrected_log_probs = torch.log(
+            log_probs_N_K_C.clamp_min(torch.finfo(log_probs_N_K_C.dtype).tiny)
+        )
     # note log_probs should be really log values, which was not the case, this is reflected in c for corrected.
     # This is tested with the entropy and mutal infomation implemented in the masters thesis
     if method in ["BatchBald", "BatchBaldLight", "BatchBaldLightL"]:
@@ -167,40 +173,40 @@ def query_batch_bald(model, dataset, unlabeled_idx_set, device, training_config,
         set_indices = [unlabeled_idx_set[i]+1 for i in indices]
         scores=uncertainty / dt
     elif method in ["cBatchBald", "cBatchBaldLight", "cBatchBaldLightL"]:
-        canidate_batch = get_batchbald_batch(torch.log(log_probs_N_K_C), batch_size=query_size, num_samples=len(unlabeled_idx_set), device = device)
+        canidate_batch = get_batchbald_batch(corrected_log_probs, batch_size=query_size, num_samples=len(unlabeled_idx_set), device = device)
         set_indices = [unlabeled_idx_set[i] for i in canidate_batch.indices]
         scores = canidate_batch.scores
     elif method == "cBald":
-        canidate_batch,_ = get_bald_batch(torch.log(log_probs_N_K_C), batch_size=query_size, device = device)
+        canidate_batch,_ = get_bald_batch(corrected_log_probs, batch_size=query_size, device = device)
         set_indices = [unlabeled_idx_set[i] for i in canidate_batch.indices]
         scores=canidate_batch.scores
     elif method == "cBaldDt":
-        _, ent_scores = get_bald_batch(torch.log(log_probs_N_K_C), batch_size=query_size, device = device)
+        _, ent_scores = get_bald_batch(corrected_log_probs, batch_size=query_size, device = device)
         uncertainty = np.diff(ent_scores)
         dt = np.abs(np.diff(dataset.timestamps[unlabeled_idx_set]))
         indices = np.argsort(uncertainty / dt)[::-1]
         set_indices = [unlabeled_idx_set[i]+1 for i in indices]
         scores=uncertainty / dt
     elif method == "cBaldDtn":
-        _, ent_scores = get_bald_batch(torch.log(log_probs_N_K_C), batch_size=query_size, device = device)
+        _, ent_scores = get_bald_batch(corrected_log_probs, batch_size=query_size, device = device)
         uncertainty = np.abs(np.diff(ent_scores))
         dt = np.abs(np.diff(dataset.timestamps[unlabeled_idx_set]))
         indices = np.argsort(uncertainty / dt)[::-1]
         set_indices = [unlabeled_idx_set[i]+1 for i in indices]
         scores=uncertainty / dt
     elif method == "cEnt":
-        canidate_batch, _ = get_entropy_batch(torch.log(log_probs_N_K_C), batch_size=query_size, device=device)
+        canidate_batch, _ = get_entropy_batch(corrected_log_probs, batch_size=query_size, device=device)
         set_indices = [unlabeled_idx_set[i] for i in canidate_batch.indices]
         scores = canidate_batch.scores
     elif method == "cEntDt":
-        _, ent_scores = get_entropy_batch(torch.log(log_probs_N_K_C), batch_size=query_size, device = device)
+        _, ent_scores = get_entropy_batch(corrected_log_probs, batch_size=query_size, device = device)
         uncertainty = np.diff(ent_scores)
         dt = np.abs(np.diff(dataset.timestamps[unlabeled_idx_set]))
         indices = np.argsort(uncertainty / dt)[::-1]
         set_indices = [unlabeled_idx_set[i]+1 for i in indices]
         scores=uncertainty / dt
     elif method == "cEntDtn":
-        _, ent_scores = get_entropy_batch(torch.log(log_probs_N_K_C), batch_size=query_size, device = device)
+        _, ent_scores = get_entropy_batch(corrected_log_probs, batch_size=query_size, device = device)
         uncertainty = np.abs(np.diff(ent_scores))
         dt = np.abs(np.diff(dataset.timestamps[unlabeled_idx_set]))
         indices = np.argsort(uncertainty / dt)[::-1]
@@ -413,10 +419,15 @@ class LogitEntropy(QueryMethod):
         self.device = device
         self.model = models["task"]
         # Create unlabeled dataloader for the unlabeled subset
+        unlabeled_idx_set = (
+            unlabeled_idx_set
+            if unlabeled_idx_set is not None
+            else dataset_handler.current_unlabeled_idcs
+        )
         unlabeled_loader = dataset_handler.get_unlabeled_pool_loader(unlabeled_idx_set)
         entropy, indices = self.get_uncertainty(self.model, unlabeled_loader)
 
-        return entropy, indices
+        return entropy, [unlabeled_idx_set[index] for index in indices]
 
     def get_uncertainty(self, model, unlabeled_loader):
         model.eval()

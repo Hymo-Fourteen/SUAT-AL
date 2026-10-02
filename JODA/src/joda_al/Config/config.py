@@ -44,15 +44,15 @@ def load_training_config():
 
 TRUE, FALSE = "True", "False"
 
-data_types = {"lr": float, "lr_backbone": float, "gcn_lr": float, "momentum": float, "wdcay": float, "margin": float,
+data_types = {"lr": float, "lr_backbone": float, "gcn_lr": float, "momentum": float, "nesterov": bool, "wdcay": float, "margin": float,
          "batch_size": int, "num_epochs": int, "lloss_weight": float, "epoch_loss": int, "softmax": bool,
          "optimizer": str, "method_type": str, "dataset": str, "num_workers": int, "full_set": bool,
          "data_scenario": str, "near_dataset": str, "far_dataset": str, "ind_classes": json.loads, "near_classes": json.loads, "far_classes": json.loads, "expanding_th": int,
-         "dataset_path": str,"early_stopping": str, "patience": int, "is_percent": bool,
+         "dataset_path": str, "size": str, "static_configuration": str, "data_config": json.loads, "early_stopping": str, "patience": int, "is_percent": bool,
          "cycles": int, "query_size": int, "experiment_folder": str, "store_image": bool,
-         "root_folder": str, "epochs_vaal": int, "seed": int, "cls_weights": str, "model": str,
+         "root_folder": str, "epochs_vaal": int, "seed": int, "cls_weights": str, "model": str, "model_configuration": json.loads,
          "coverage_method": str, "coverage_hyper": float, "coverage_al": str, "surprise_strategy": str, "gain_mode": str, "use_gradients": bool, "use_pca": bool, "seperator": str, "sep_metric": str,
-         "nac_config": str, "nac_dataset": str, "nnguide_config": str, "sigmoids": json.loads, "layer_selection": json.loads, "osr": bool, "acl_balancing": bool, "apply_ood_filter":  bool,"lambda_oe": float,
+         "nac_config": str, "nac_dataset": str, "nnguide_config": str, "sigmoids": json.loads, "layer_selection": json.loads, "args": json.loads, "osr": bool, "acl_balancing": bool, "apply_ood_filter":  bool,"lambda_oe": float,
          "skip_first": bool, "checkpoint_path": str,
          "epoch_start": int,
          "near-ratio": float,
@@ -76,9 +76,10 @@ data_types = {"lr": float, "lr_backbone": float, "gcn_lr": float, "momentum": fl
          "base": str, "over_selection": float,  "overlap": int,
          "opensetmode": str,
          # Scheduler
-         "milestones": json.loads, "scheduler": json.loads, "warm_up": bool,
+         "milestones": json.loads, "scheduler": json.loads, "warm_up": bool, "detect_anomaly": bool,
+         "debug_pipeline": bool, "debug_epochs": json.loads, "debug_max_modules": int,
          # Loss learning:
-         "head_loss_features": bool, "train_loss": bool, "train_loss_detached": bool,  "lloss_reg": float, "loss_module_lr": float,
+         "head_loss_features": bool, "train_loss": bool, "train_loss_detached": bool,  "lloss_reg": float, "loss_module_lr": float, "lloss_loss_function": str,
          "new_model_eval": bool,
          #  "lower_loss": bool, "higher_loss": bool, "higher_loss2": bool,
          # Model
@@ -86,7 +87,7 @@ data_types = {"lr": float, "lr_backbone": float, "gcn_lr": float, "momentum": fl
          "pretrained_backbone": bool,
          "aux_loss": bool,
          # Experiment config
-         "task": str,
+         "task": str, "query_scenario": str,
          "engine": str,
          "only_select": bool,
          # Submodular optimization

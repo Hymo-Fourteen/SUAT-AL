@@ -41,6 +41,10 @@ class TransformSubset(Subset):
             img, target = self.transforms(img, target)
         return img, target
 
+    def __getitems__(self, indices: Sequence[int]):
+        """Apply this wrapper's transforms on PyTorch's batched fetch path."""
+        return [self[idx] for idx in indices]
+
     def to_TransformDataset(self) -> 'TransformDataset':
         """
         Converts this TransformSubset into a TransformDataset.
@@ -84,6 +88,10 @@ class TransformSubsetLightning(Subset):
                 result = self.transforms(result)
         return result
 
+    def __getitems__(self, indices: Sequence[int]):
+        """Apply this wrapper's transforms on PyTorch's batched fetch path."""
+        return [self[idx] for idx in indices]
+
 
 T = TypeVar("T", bound=Dataset, covariant=True)
 
@@ -126,6 +134,10 @@ class TransformDataset(Generic[T]):
         if self.transforms:
             img, target = self.transforms(img, target)
         return img, target
+
+    def __getitems__(self, indices: Sequence[int]):
+        """Apply this wrapper's transforms on PyTorch's batched fetch path."""
+        return [self[idx] for idx in indices]
 
     def __len__(self) -> int:
         return len(self.dataset)

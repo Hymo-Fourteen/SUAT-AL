@@ -138,8 +138,11 @@ class kCenterGreedy(SamplingMethod):
         Returns:
           indices of points selected to minimize distance to cluster centers
         """
-        # Both empty
-        if not (self.already_selected and already_selected):
+        # Only bootstrap randomly when there are genuinely no labeled centers.
+        # In the pool workflow ``already_selected`` contains the labeled samples
+        # appended after the unlabeled subset, so adding another random center
+        # here would silently influence the result without querying that sample.
+        if len(already_selected) == 0:
             # Initialize centers with a randomly selected datapoint
             ind = np.random.choice(np.arange(self.n_obs))
             already_selected=np.concatenate([already_selected,np.array([ind])])

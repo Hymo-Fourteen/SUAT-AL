@@ -1,0 +1,62 @@
+{
+  "experiment_config": {
+    "method_type": "cBald",
+    "query_scenario": "Pool",
+    "data_scenario": "osal-extending",
+    "dataset_path": "/data1/xiguo/datasets/open-set-plankton/staging/zooscan/SYKE-plankton_ZooScan_2024",
+    "static_configuration": "ta",
+    "size": "full",
+    "root_folder": "/data1/xiguo/joda/joda_runs",
+    "task": "classification",
+    "engine": "pytorch",
+    "cycles": 10,
+    "is_percent": false,
+    "near_classes": [],
+    "far_classes": [-1],
+    "opensetmode": "InD",
+    "store_tsne": false,
+    "store_image": false,
+    "verbosity": 1,
+    "seed": 0,
+    "dataset": "SYKE-ZooScan-ta",
+    "experiment_folder": "cbald-semantic-zooscan-only",
+    "query_size": 500,
+    "ind_classes": [0, 1, 2, 3, 4, 5, 6, 7],
+    "far_dataset": "None",
+    "expanding_th": 10,
+    "data_config": {
+      "image_root": "/data1/xiguo/datasets/open-set-plankton/staging/zooscan/SYKE-plankton_ZooScan_2024/images/SYKE-plankton_ZooScan_2024",
+      "split_root": "/data1/xiguo/datasets/open-set-plankton/staging/zooscan/SYKE-plankton_ZooScan_2024/class_splits/SYKE-plankton_ZooScan_2024",
+      "ind_original_class_ids": [1, 2, 6, 8, 10, 13, 17, 19],
+      "discovery_original_class_ids": [0, 4, 5, 7, 16],
+      "initial_labeled_per_class": 20,
+      "image_size": 64,
+      "far_data_config": {
+        "image_root": "/data1/xiguo/datasets/open-set-plankton/staging/zooscan/SYKE-plankton_ZooScan_2024/images/SYKE-plankton_ZooScan_2024",
+        "split_root": "/data1/xiguo/datasets/open-set-plankton/staging/zooscan/SYKE-plankton_ZooScan_2024/class_splits/SYKE-plankton_ZooScan_2024",
+        "original_class_ids": [3, 11],
+        "splits": ["train"]
+      }
+    }
+  },
+  "training_config": {
+    "method_type": "cBald",
+    "model": "Resnet18",
+    "model_configuration": {"do_ratio": 0.05, "use_during_training": false},
+    "num_mc_samples": 10,
+    "pretrained": false,
+    "pretrained_backbone": false,
+    "num_epochs": 200,
+    "batch_size": 128,
+    "num_workers": 4,
+    "optimizer": "SGD",
+    "lr": 0.1,
+    "momentum": 0.9,
+    "wdcay": 0.0005,
+    "milestones": [60, 120, 160],
+    "scheduler": {"type": "MultiStep", "gamma": 0.2},
+    "loss_func": "CrossEntropy",
+    "triplet_mode": "off",
+    "new_model_eval": false
+  }
+}

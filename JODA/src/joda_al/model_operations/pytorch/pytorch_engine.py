@@ -13,6 +13,7 @@ from joda_al.utils.logging_utils.training_logger import gl_info
 from torch import nn
 
 from joda_al.utils.method_utils import is_loss_learning
+from joda_al.utils.pipeline_debug import dataset_chain_summary, emit, enabled, optimizer_summary
 
 
 class PyTorchOperator(EngineOperator):
@@ -71,6 +72,23 @@ class PyTorchOperator(EngineOperator):
             cls_weights,
             cls_counts,
         )
+        if enabled(config.training_config):
+            emit(f"setup cycle={cycle_num} dataset={dataset_config} train_pool={len(train_dataset)} "
+                 f"labeled={len(labeled_idx)} unlabeled={len(unlabeled_idcs)} "
+                 f"train_batches={len(training_loader)} val_samples={len(validation_loader.dataset)} "
+                 f"test_samples={len(test_loader.dataset)} class_counts={cls_counts}")
+            emit(f"setup cycle={cycle_num} model={models['task'].__class__.__module__}."
+                 f"{models['task'].__class__.__name__} parameters="
+                 f"{sum(p.numel() for p in models['task'].parameters())}")
+            emit(f"setup cycle={cycle_num} optimizers={optimizer_summary(optimizers)}")
+            emit(f"setup cycle={cycle_num} schedulers="
+                 f"{ {name: type(value).__name__ if value else None for name, value in schedulers.items()} }")
+            emit(f"setup cycle={cycle_num} train_dataset_chain="
+                 f"{dataset_chain_summary(training_loader.dataset)}")
+            emit(f"setup cycle={cycle_num} validation_dataset_chain="
+                 f"{dataset_chain_summary(validation_loader.dataset)}")
+            emit(f"setup cycle={cycle_num} test_dataset_chain="
+                 f"{dataset_chain_summary(test_loader.dataset)}")
 
         ############################################################
         # Training and testing

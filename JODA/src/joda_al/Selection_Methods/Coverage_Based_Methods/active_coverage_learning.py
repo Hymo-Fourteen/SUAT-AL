@@ -102,7 +102,10 @@ class JodaQuery(QueryMethod):
         self.coverage_al = config["coverage_al"] # set if coverage should be computed individually, incrementally or optimal
 
         # input size of image TODO: read from config
-        sample_size = dataset_handler.dataset_config.get("size") or dataset_handler.dataset_config.get("sample_size", (32, 32))
+        sample_size = (
+            dataset_handler.dataset_config.get("size")
+            or dataset_handler.dataset_config.get("sample_size", (32, 32))
+        )
         input_size = (1, 3, sample_size[0], sample_size[1])
         random_data = torch.randn(input_size).to(device=self.device)
         # layer size dict needed for attaching hooks to network
@@ -143,7 +146,17 @@ class JodaQuery(QueryMethod):
 
             self.joda_logic.weight = mean_stats
             self.joda_logic.std = std_stats
-            self.joda_logic.final_std = np.sqrt(2)
+            eps = torch.finfo(gain_list.dtype).eps
+            q_std = max(float(std_stats[0]), eps)
+            energy_std = max(float(std_stats[1]), eps)
+            sisome_scores = min(mean_stats[0], 1.0) * (
+                (gain_list[:, 1] - mean_stats[1]) / energy_std
+            ) + max(1.0 - mean_stats[0], 0.0) * (
+                (gain_list[:, 0] - mean_stats[0]) / q_std
+            )
+            # Eq. (4) scales the class-balancing factor with the standard
+            # deviation of the labeled SISOMe scores, not a fixed constant.
+            self.joda_logic.final_std = float(torch.std(sisome_scores))
             gl_info(f"Gain-Mean: {mean_stats[0]}, Gain-Std: {std_stats[0]}, Cycle: {self.cycle_num}")
         elif self.gain_mode == "pure_energy":
             mean_stats = torch.mean(gain_list, dim=0).float().tolist()
@@ -167,10 +180,20 @@ class JodaQuery(QueryMethod):
         cov_gains, indices, statistics = self.joda_logic.top_k(unlabeled_loader, query_size, self.coverage_al,
                                                                no_label=True, gain_mode=self.gain_mode,
                                                                surprise_strategy=self.surprise_strategy)
+        if not cov_gains:
+            raise RuntimeError(
+                "Joda OOD filtering removed every unlabeled candidate; "
+                "inspect the learned threshold and labeled OOD examples"
+            )
         set_indices = [unlabeled_idx_set[i] for i in indices]
 
+        if len(cov_gains) < query_size:
+            gl_info(
+                f"OOD filtering retained only {len(cov_gains)} of the "
+                f"requested {query_size} candidates"
+            )
         gl_info(f"max cov-gain selected: {cov_gains[0]}")
-        gl_info(f"min cov-gain selected: {cov_gains[query_size - 1]}")
+        gl_info(f"min cov-gain selected: {cov_gains[min(query_size, len(cov_gains)) - 1]}")
         # gl_info(f"mean cov-gain: {np.mean(np.array(cov_gains[:query_size-1]))}")
         gl_info(f"Current Coverage: {self.joda_logic.current}")
         return cov_gains, set_indices

@@ -36,11 +36,14 @@ class JodaLogic():
         self.std = (1, 1)
         self.current = 0
         self.optimal_threshold = None
+        self.class_counts = torch.zeros(self.num_class, dtype=torch.long)
+        self.labeled_pool_size = 0
         # Joda Specific
         self.sep_metric = kwargs.get("sep_metric", "AB") # OOD filtering strategy
         self.seperator = kwargs.get("seperator", "metric") # for OOD filtering metric, kmeans, knn, knn-kmeans
         self.apply_ood_filter = kwargs.get("apply_ood_filter", True)
         self.use_balancing = kwargs.get("use_balancing", True) # class balancing
+        self.use_shapley = False
 
         self.coverage_set = set()
         self.mask_index_dict = {}
@@ -106,12 +109,28 @@ class JodaLogic():
         - surprise_strategy (str): The surprise strategy to use for assessment. Default is "surprise".
 
         Returns:
-        - gain_list (torch.Tensor): The list of gains for in-distribution samples.
+        - gain_list (torch.Tensor): The list of gains for target samples (I and D).
         - all_statistics (torch.Tensor): The statistics for all samples.
         """
         cached_SA_batches, cached_SA_labels, cached_SA_scores, cached_sample_idcs, cached_true_labels = self.build_greedy(
-            data_loader, use_prediction=False, build=True)
+            data_loader, use_prediction=True, build=True)
+        predicted_labels = cached_SA_scores.argmax(dim=1)
+        self.class_counts = torch.bincount(
+            predicted_labels, minlength=self.num_class
+        )[:self.num_class]
+        self.labeled_pool_size = len(predicted_labels)
         inD_indices = ((cached_true_labels >= 0) & (cached_true_labels < self.num_class)).nonzero(as_tuple=True)[0]
+        if self.scenario in (
+            DataUpdateScenario.osal_near_far,
+            DataUpdateScenario.osal_extending,
+        ):
+            # Eq. (3) estimates m_avg over target samples X_{I,D}.  Classes
+            # from D that have not reached the expansion threshold still have
+            # labels >= num_class, but they remain target data and must not be
+            # discarded together with far-OOD samples (whose label is < 0).
+            target_indices = (cached_true_labels >= 0).nonzero(as_tuple=True)[0]
+        else:
+            target_indices = inD_indices
         # OOD_indices = (cached_SA_labels >= self.num_class).nonzero(as_tuple=True)[0]
         cached_SA_labels[inD_indices] = cached_true_labels[inD_indices]
         cached_dataset = torch.utils.data.TensorDataset(cached_SA_batches, cached_SA_labels, cached_SA_scores,
@@ -145,29 +164,69 @@ class JodaLogic():
         if self.seperator == "metric" and "osal" in self.scenario and (self.cycle_num > 0 or self.scenario != "osal"):
             self.estimate_ood_threshold(all_statistics, mean_stats, std_stats)
 
-        return gain_list[inD_indices], all_statistics
+        return gain_list[target_indices], all_statistics
 
     def estimate_ood_threshold(self, all_statistics, mean_stats, std_stats):
-        if self.sep_metric == "AB":
-            metric = -(all_statistics[:, 0] + all_statistics[:, 1])
-        elif self.sep_metric == "energy":
-            metric = all_statistics[:, 3]
-        elif self.sep_metric == "dsa":
-            metric = all_statistics[:, 2]
-        elif self.sep_metric == "dsaenergy":
-            metric = min(1, mean_stats[0]) * (all_statistics[:, 3] - mean_stats[1]) / std_stats[1] + \
-                     max(1.0 - mean_stats[0], 0.0) * (all_statistics[:, 2] - mean_stats[0]) / std_stats[0]
-        else:
-            raise NotImplementedError(f"metric: {self.sep_metric} is not supported")
+        metric = self.get_separation_metric(all_statistics, mean_stats, std_stats)
         if self.scenario == "osal":
             ood_stats = (all_statistics[:, 6] == 1).float()
         else:
             ood_stats = (all_statistics[:, 6] == 2).float()
+        if torch.unique(ood_stats).numel() < 2:
+            self.optimal_threshold = None
+            gl_info("OOD threshold omitted: labeled pool does not contain both InD and far-OOD samples")
+            return
         fpr, tpr, thresholds = roc_curve(ood_stats, metric)
         youden_j = tpr - fpr
         optimal_threshold_index = youden_j.argmax()
         self.optimal_threshold = thresholds[optimal_threshold_index]
         gl_info(f"Optimal threshold: {self.optimal_threshold}")
+
+    def get_separation_metric(self, statistics, mean_stats=None, std_stats=None):
+        """Return the score used both to fit and apply the OOD separator.
+
+        Larger values are treated as more likely far-OOD, matching the ROC
+        convention used in :meth:`estimate_ood_threshold`.
+        """
+        if self.sep_metric == "AB":
+            return -(statistics[:, 0] + statistics[:, 1])
+        if self.sep_metric == "energy":
+            return statistics[:, 3]
+        if self.sep_metric == "dsa":
+            return statistics[:, 2]
+        if self.sep_metric == "dsaenergy":
+            mean_stats = self.weight if mean_stats is None else mean_stats
+            std_stats = self.std if std_stats is None else std_stats
+            eps = torch.finfo(torch.float32).eps
+            dsa_std = max(float(std_stats[0]), eps)
+            energy_std = max(float(std_stats[1]), eps)
+            return min(1, mean_stats[0]) * (
+                (statistics[:, 3] - mean_stats[1]) / energy_std
+            ) + max(1.0 - mean_stats[0], 0.0) * (
+                (statistics[:, 2] - mean_stats[0]) / dsa_std
+            )
+        raise NotImplementedError(f"metric: {self.sep_metric} is not supported")
+
+    def get_ind_candidate_mask(self, statistics):
+        """Apply Joda's learned OOD threshold to an unlabeled batch."""
+        if (
+            not self.apply_ood_filter
+            or self.seperator != "metric"
+            or self.optimal_threshold is None
+        ):
+            return torch.ones(len(statistics), dtype=torch.bool)
+        metric = self.get_separation_metric(statistics)
+        return metric < self.optimal_threshold
+
+    def apply_class_balance(self, gains, predicted_labels):
+        """Apply the class-balancing term from Eq. (4) of the paper."""
+        if not self.use_balancing or self.labeled_pool_size == 0:
+            return gains
+        labels = predicted_labels.to(torch.long).cpu()
+        counts = self.class_counts[labels].to(gains.dtype)
+        relative_class_share = counts * self.num_class / self.labeled_pool_size
+        balance_factor = -float(self.final_std) * (relative_class_share - 1.0)
+        return gains + balance_factor
 
     def top_k_loop(self, indices_and_gains: list, data_loader, coverage_al: str, no_label: bool = False,
                    gain_mode="standard", surprise_strategy="coverage", query_size=1000, cached_data=None):
@@ -204,12 +263,17 @@ class JodaLogic():
                 SA_batch = SA_batch.numpy()
             dsa, statistics = self.calculate_greedy(SA_batch, pred_label_batch, score_batch,
                                                     surprise_strategy=surprise_strategy)
+            dsa = self.apply_class_balance(dsa, pred_label_batch)
             if coverage_al == "incremental":
                 ood_stats = (true_labels < 0) * 2 + (true_labels >= self.num_class)
                 statistics = torch.cat((statistics, idcs_batch.unsqueeze(1), ood_stats.unsqueeze(1)), dim=1)
                 all_statistics = torch.cat((all_statistics, statistics), dim=0)
                 # dsa, energy = self.step(sample_data, sample_target, gain_mode = gain_mode, surprise_strategy = surprise_strategy)
-                indices_and_gains += torch.cat([idcs_batch.unsqueeze(1), dsa.unsqueeze(1)], dim=1).cpu().tolist()
+                candidate_mask = self.get_ind_candidate_mask(statistics)
+                indices_and_gains += torch.cat(
+                    [idcs_batch[candidate_mask].unsqueeze(1), dsa[candidate_mask].unsqueeze(1)],
+                    dim=1,
+                ).cpu().tolist()
             elif coverage_al == "optimal":
                 # get the idx from idcs_batch where the max dsa is
                 max_dsa, max_idx = torch.max(dsa, 0)
@@ -418,6 +482,82 @@ class JodaLogic():
         # Concatenate SA_batch with SA_history along the 0th dimension
         self.SA_history = torch.cat([self.SA_history, SA_batch], dim=0)
 
+    def build_greedy(self, data_loader, use_prediction=False, build=False):
+        cached_SA_batches = torch.tensor([])
+        cached_SA_labels = torch.tensor([], dtype=torch.long)
+        cached_SA_scores = torch.tensor([])
+        cached_sample_idcs = torch.tensor([], dtype=torch.long)
+        cached_true_labels = torch.tensor([], dtype=torch.long)
+        sample_offset = 0
+        for data, label in tqdm(data_loader):
+            sample_idcs = torch.arange(sample_offset, sample_offset + len(label))
+            sample_offset += len(label)
+            data = data.to(self.device)
+            true_labels = label.detach().cpu()
+            SA_batch, label_batch, _, score = self.nac_forward_pass(
+                data, label.to(self.device), use_prediction=use_prediction
+            )
+            cached_SA_batches = torch.cat((cached_SA_batches, SA_batch), dim=0)
+            cached_SA_labels = torch.cat((cached_SA_labels, label_batch.to(torch.long)), dim=0)
+            cached_SA_scores = torch.cat((cached_SA_scores, score), dim=0)
+            cached_sample_idcs = torch.cat((cached_sample_idcs, sample_idcs), dim=0)
+            cached_true_labels = torch.cat((cached_true_labels, true_labels.to(torch.long)), dim=0)
+        return cached_SA_batches, cached_SA_labels, cached_SA_scores, cached_sample_idcs, cached_true_labels
+
+    def nac_forward_pass(self, data_batch, label_batch, use_prediction=False):
+        layer_output_dict, score = get_layer_output_nac(
+            self.model, data_batch, layer_selection=self.layer_selection,
+            use=self.use, dataset=self.dataset, sigmoids=self.sigmoids
+        )
+        if use_prediction:
+            label_batch = score.argmax(dim=1)
+        batch_size = label_batch.size(0)
+        SA_batch = []
+        for layer_name, layer_output in layer_output_dict.items():
+            if "Linear" not in layer_name:
+                SA_batch.append(layer_output[:, self.mask_index_dict[layer_name]].view(batch_size, -1))
+        SA_batch = torch.cat(SA_batch, 1).detach().cpu()
+        return SA_batch, label_batch.detach().cpu(), layer_output_dict, score.detach().cpu()
+
+    def calculate_greedy(self, SA_batch, label_batch, score, surprise_strategy="surprise"):
+        dsa_list = []
+        statistics = []
+        energy = get_energy_score(score).cpu().detach().numpy()
+        for i, label in enumerate(label_batch):
+            SA = SA_batch[i]
+            dist_a_list = torch.linalg.norm(
+                torch.from_numpy(SA).to(self.device)
+                - torch.from_numpy(self.SA_cache[int(label)]).to(self.device),
+                dim=1
+            )
+            if self.weight[1] == 0 and len(dist_a_list) > 1:
+                # The labeled assessment contains the sample itself.
+                idx_a = torch.topk(dist_a_list, 2, largest=False).indices[1]
+            else:
+                # Unlabeled samples are not in SA_cache.
+                idx_a = torch.argmin(dist_a_list)
+            SA_a = self.SA_cache[int(label)][idx_a]
+            dist_a = float(dist_a_list[idx_a].cpu())
+            dist_b_list = []
+            for other_label in range(self.num_class):
+                if other_label != int(label) and other_label in self.SA_cache:
+                    dist_b_list.extend(torch.linalg.norm(
+                        torch.from_numpy(SA_a).to(self.device)
+                        - torch.from_numpy(self.SA_cache[other_label]).to(self.device),
+                        dim=1
+                    ).cpu().numpy().tolist())
+            dist_b = min(dist_b_list)
+            dsa = dist_a / dist_b if dist_b > 0 else 1e-6
+            gain = min(self.weight[0], 1.0) * ((energy[i] - self.weight[1]) / self.std[1]) + \
+                   max(1.0 - self.weight[0], 0.0) * ((dsa - self.weight[0]) / self.std[0])
+            if surprise_strategy == "dist_a":
+                gain = dist_a
+            elif surprise_strategy == "dist_b":
+                gain = 1 / dist_b if dist_b > 0 else 1e-6
+            dsa_list.append(gain)
+            statistics.append([dist_a, dist_b, dsa, energy[i], gain])
+        return torch.tensor(dsa_list), torch.tensor(statistics)
+
     def top_k(self, data_loader, k, coverage_al, no_label=False, gain_mode="standard", surprise_strategy="coverage"):
         """
         Selects the top k samples based on a coverage-based active learning strategy
@@ -447,7 +587,12 @@ class JodaLogic():
         elif coverage_al == "incremental":
             indices_and_gains, statistics = self.top_k_loop(indices_and_gains, cached_dataloader, coverage_al, no_label=no_label, gain_mode=gain_mode, surprise_strategy=surprise_strategy, query_size=k)
 
-        if "osal" in self.scenario:
+        gl_info(
+            f"Joda candidates after OOD filtering: {len(indices_and_gains)}/"
+            f"{len(cached_dataset)}"
+        )
+
+        if "osal" in self.scenario and hasattr(self, "calculate_ood_accuracy"):
             p, r = self.calculate_ood_accuracy(indices_and_gains, cached_true_labels, self.scenario)
             gl_info(f"OOD Detection Precision: {p}, Recall: {r}")
         indices_and_gains.sort(key=lambda x: x[1], reverse=True)

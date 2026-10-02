@@ -1,4 +1,5 @@
 import itertools
+from copy import deepcopy
 from typing import Dict, Union, Tuple, List, Optional
 from warnings import warn
 
@@ -138,7 +139,7 @@ class BadgeQuery(QueryMethod):
         mu = [X[ind]]
         indsAll = [ind]
         centInds = [0.] * len(X)
-        unc = []
+        unc = [float(np.linalg.norm(X[ind], 2))]
         cent = 0
         print('#Samps\tTotal Distance')
         while len(mu) < K:
@@ -153,8 +154,18 @@ class BadgeQuery(QueryMethod):
             print(str(len(mu)) + '\t' + str(sum(D2)), flush=True)
             # if sum(D2) == 0.0: pdb.set_trace()
             D2 = D2.ravel().astype(float)
+            squared_distances = D2 ** 2
+            distance_sum = squared_distances.sum()
+            if not np.isfinite(distance_sum) or distance_sum <= 0:
+                remaining = np.setdiff1d(np.arange(len(X)), np.asarray(indsAll))
+                ind = int(np.random.choice(remaining))
+                mu.append(X[ind])
+                unc.append(float(D2[ind]))
+                indsAll.append(ind)
+                cent += 1
+                continue
             # normed distances
-            Ddist = (D2 ** 2) / sum(D2 ** 2)
+            Ddist = squared_distances / distance_sum
             # drawing from a probability
             customDist = stats.rv_discrete(name='custm', values=(np.arange(len(D2)), Ddist))
             ind = customDist.rvs(size=1)[0]

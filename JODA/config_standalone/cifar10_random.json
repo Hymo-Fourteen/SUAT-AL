@@ -1,0 +1,78 @@
+{
+  "experiment_config": {
+    "method_type": "Joda",
+    "query_scenario": "Pool",
+    "data_scenario": "osal-extending",
+    "dataset_path": "/data/xiguo/joda/joda_data",
+    "static_configuration": "ta",
+    "size": "full",
+    "root_folder": "/data/xiguo/joda/joda_runs",
+    "task": "classification",
+    "engine": "pytorch",
+    "cycles": 10,
+    "is_percent": false,
+    "near_classes": [],
+    "far_classes": [],
+    "opensetmode": "All",
+    "store_tsne": false,
+    "store_image": false,
+    "verbosity": 1,
+    "seed": 0,
+    "dataset": "cifar10-ll",
+    "experiment_folder": "paper-joda-cifar10-random",
+    "query_size": 1000,
+    "ind_classes": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "far_dataset": "random",
+    "expanding_th": 100
+  },
+  "training_config": {
+    "method_type": "Joda",
+    "model": "Resnet18",
+    "model_configuration": {"do_ratio": 0.0},
+    "pretrained": false,
+    "pretrained_backbone": false,
+    "num_epochs": 200,
+    "batch_size": 128,
+    "num_workers": 4,
+    "optimizer": "SGD",
+    "lr": 0.1,
+    "momentum": 0.9,
+    "wdcay": 0.0005,
+    "milestones": [
+      60,
+      120,
+      160
+    ],
+    "scheduler": {
+      "type": "MultiStep",
+      "gamma": 0.2
+    },
+    "loss_func": "OutlierExposure",
+    "lambda_oe": 0.5,
+    "triplet_mode": "triplet",
+    "coverage_method": "DSC",
+    "coverage_hyper": 0.75,
+    "coverage_al": "incremental",
+    "surprise_strategy": "surprise",
+    "gain_mode": "energy",
+    "use_pca": false,
+    "seperator": "metric",
+    "sep_metric": "energy",
+    "acl_balancing": true,
+    "apply_ood_filter": true,
+    "sigmoids": {
+      "AdaptiveAvgPool2d-1": 100,
+      "Sequential-3": 1000,
+      "Sequential-2": 0.001,
+      "Sequential-1": 0.001
+    },
+    "new_model_eval": false
+  }
+}

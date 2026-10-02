@@ -1,0 +1,24 @@
+{
+  "experiment_config": {
+    "method_type": "Random", "query_scenario": "Full", "data_scenario": "standard",
+    "dataset_path": "/data/xiguo/joda/joda_data", "static_configuration": "ta",
+    "size": "full", "root_folder": "/data1/xiguo/joda/joda_runs",
+    "task": "classification", "engine": "pytorch", "cycles": 0,
+    "query_size": 0, "is_percent": false, "store_tsne": false,
+    "store_image": false, "verbosity": 1, "seed": 0,
+    "dataset": "cifar100-ta", "experiment_folder": "debug-full-data-cifar100-seed0"
+  },
+  "training_config": {
+    "method_type": "Random", "model": "Resnet18",
+    "model_configuration": {"do_ratio": 0.0}, "pretrained": false,
+    "pretrained_backbone": false, "num_epochs": 200, "batch_size": 128,
+    "num_workers": 4, "optimizer": "SGD", "lr": 0.1, "momentum": 0.9,
+    "nesterov": false, "wdcay": 0.0005, "milestones": [60, 120, 160],
+    "scheduler": {"type": "MultiStep", "gamma": 0.2},
+    "loss_func": "CrossEntropy", "early_stopping": "val_acc", "patience": 200,
+    "warm_up": true, "eval_frequencey": 1, "new_model_eval": false,
+    "debug_pipeline": true,
+    "debug_epochs": [0, 1, 59, 60, 119, 120, 159, 160, 199],
+    "debug_max_modules": 200
+  }
+}

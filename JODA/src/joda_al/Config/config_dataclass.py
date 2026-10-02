@@ -15,6 +15,7 @@ class TrainingConfig:
         lr (float): Learning rate for the optimizer. Default is 1e-1.
         lr_backbone (float): Learning rate for the backbone network. Default is 1e-3.
         momentum (float): Momentum factor for optimizers like SGD. Default is 0.9.
+        nesterov (bool): Use Nesterov momentum with SGD. Default is False.
         wdcay (float): Weight decay (L2 penalty). Default is 5e-4.
         batch_size (int): Number of samples per batch. Default is 128.
         num_epochs (int): Number of training epochs. Default is 200.
@@ -31,6 +32,7 @@ class TrainingConfig:
         milestones (List[int]): Epochs at which to change learning rate. Default is empty list.
         scheduler (Dict): Scheduler configuration. Default is {"type": "cosine"}.
         warm_up (bool): Use learning rate warm-up. Default is False.
+        detect_anomaly (bool): Enable PyTorch autograd anomaly detection. Default is False.
         epoch_start (int): Starting epoch number. Default is 0.
         epsilon (float): Epsilon value for loss or optimizer. Default is 0.1.
         eval_frequencey (int): Frequency of evaluation (in epochs). Default is 1.
@@ -43,10 +45,14 @@ class TrainingConfig:
         ensemble_size (int): Number of models in the ensemble. Default is 3.
         ensemble_training (bool): Enable ensemble training. Default is True.
         load_from_checkpoint (str): Path to checkpoint for loading weights. Default is "".
+        debug_pipeline (bool): Print opt-in data/model pipeline diagnostics. Default is False.
+        debug_epochs (List[int]): Epochs whose first real batch is diagnosed.
+        debug_max_modules (int): Maximum leaf-module hook records per diagnosed batch.
     """
     lr: float = 1e-1
     lr_backbone: float = 1e-3
     momentum: float = 0.9
+    nesterov: bool = False
     wdcay: float = 5e-4
     batch_size: int = 128
     num_epochs: int = 200
@@ -60,6 +66,7 @@ class TrainingConfig:
     milestones: List[int] = field(default_factory=list)
     scheduler: Dict = field(default_factory=lambda: {"type": "cosine"})
     warm_up: bool = False
+    detect_anomaly: bool = False
     epoch_start: int = 0
     epsilon: float = 0.1 #Doppelt Belegt
     eval_frequencey: int = 1
@@ -72,6 +79,11 @@ class TrainingConfig:
     ensemble_size: int = 3
     ensemble_training: bool = True #True
     load_from_checkpoint: str = ""
+    debug_pipeline: bool = False
+    debug_epochs: List[int] = field(
+        default_factory=lambda: [0, 1, 59, 60, 119, 120, 159, 160, 199]
+    )
+    debug_max_modules: int = 200
 
 @dataclass
 class ModelSubConfig:
@@ -208,6 +220,7 @@ class DataScenarioConfig:
     opensetmode: str = "InD"
 
 
+@dataclass
 class DataSetConfig(NestedConfig):
     """
     Configuration for a dataset.
@@ -224,7 +237,7 @@ class DataSetConfig(NestedConfig):
     dataset_path: str = "/Datasets/"
     size: str = "full"
     static_configuration: str = "ta"
-    data_config: Dict = field(default_factory=lambda: DataConfig())
+    data_config: Dict = field(default_factory=dict)
 
 
 @dataclass
@@ -239,15 +252,9 @@ def load_experiment_config():
     experiment_config.update(asdict(LoggingConfig()))
     experiment_config.update(asdict(ActiveLearningScenarioConfig()))
     experiment_config.update(asdict(DataScenarioConfig()))
-    # DataSetConfig is intentionally not a decorated dataclass; its class-level
-    # fields are not captured by asdict(), so merge them manually.
-    experiment_config.update({
-        "dataset": DataSetConfig.dataset,
-        "order": DataSetConfig.order,
-        "dataset_path": DataSetConfig.dataset_path,
-        "size": DataSetConfig.size,
-        "static_configuration": DataSetConfig.static_configuration,
-    })
+    # DataSetConfig is now a proper dataclass, so asdict() captures every field
+    # (including data_config, which the plankton loaders rely on).
+    experiment_config.update(asdict(DataSetConfig()))
     return experiment_config
 
 

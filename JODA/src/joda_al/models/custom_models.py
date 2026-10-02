@@ -133,10 +133,13 @@ class ResNet(nn.Module, LossLearningMixin):
         else:
             raise NotImplementedError()
         self.use_during_training = use_during_training
+        self.max_pool = max_pool
         self.in_planes = 64
         self.embDim = 512
         self.conv1 = nn.Conv2d(3, 64, kernel_size=first_cov, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
+        if self.max_pool:
+            self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, num_blocks[0], norm_layer=norm_layer, stride=1,act=act)
         self.layer2 = self._make_layer(block, 128, num_blocks[1], norm_layer=norm_layer, stride=2,act=act)
         self.layer3 = self._make_layer(block, 256, num_blocks[2], norm_layer=norm_layer, stride=2,act=act)
@@ -308,5 +311,3 @@ def ResNet101():
 
 def ResNet152():
     return ResNet(Bottleneck, [3, 8, 36, 3])
-
-

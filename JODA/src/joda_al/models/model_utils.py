@@ -296,7 +296,8 @@ def get_optimizer_scheduler_classification(
             model.parameters(),
             lr=lr,
             momentum=training_config["momentum"],
-            weight_decay=training_config["wdcay"]
+            weight_decay=training_config["wdcay"],
+            nesterov=training_config.get("nesterov", False),
         )
         scheduler = get_scheduler(training_config, optimizer)
     elif training_config["optimizer"] == "Adam":
