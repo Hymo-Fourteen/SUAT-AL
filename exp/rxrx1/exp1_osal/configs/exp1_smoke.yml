@@ -1,0 +1,108 @@
+# 实验一（RxRx1-OSDAL）冒烟配置
+#
+# 目的：在 CPU 上把 [RxRx1 loader -> OSDAL 池改造 -> JODA 选择 -> 重训 -> 评测]
+# 这条链路完整跑通，验证**代码正确**。目的不是复现论文口径。
+# 正式实验的配置在 configs/matrix/ 下（待补）。
+#
+# 与正式实验的**有意差异**（原因见 notes.md）：
+#   * 类别方案用 smoke（I=6, D=4）而非 B60（I=696, D=443）：
+#     全量池 40,612 张 256px 图在 CPU 上跑不动，而冒烟要验证的机制与类别数无关。
+#   * cycles=2 / query_size=200 / num_epochs=1 / batch_size=16：压到分钟级。
+#   * num_workers=0：冒烟要看的日志顺序不被多进程打乱。
+#
+# 与正式实验**保持一致**的部分（这些才是有意义的验证对象）：
+#   * dataset 命名 "rxrx1-ta"（决定 dataset_factory / trans_map 命中）
+#   * data_scenario=osal-extending、far_dataset="None"、far_classes=[-1]
+#   * loss_func=OutlierExposure + triplet_mode=triplet（OE 只作用于 label<0 的 far-OOD）
+#   * 标签空间约定：InD=0..I-1、D=I..I+D-1、far=-1
+#   * 逐图实例标准化 + 90° 旋转/水平翻转
+
+experiment_config:
+  method_type: Joda
+  query_scenario: Pool
+  strategy: retrain
+  base: Pool
+  task: classification
+  engine: pytorch
+  # "rxrx1-ta"：名字里必须带 -ta。dataset_comb_name 会拼成 "rxrx1-ta-ta"，
+  # 再靠最长前缀匹配回落到 trans_map 里的 "rxrx1-ta"。
+  dataset: rxrx1-ta
+  dataset_path: /home/yuxuan/my_project/SUAT-AL/data/wilds/rxrx1_v1.0
+  static_configuration: ta
+  size: full
+  root_folder: /home/yuxuan/my_project/SUAT-AL/exp/rxrx1/exp1_osal/results
+  experiment_folder: smoke_joda_rxrx1
+  cycles: 2
+  query_size: 200
+  is_percent: false
+  overlap: 0
+  over_selection: 2.0
+  seed: 0
+  verbosity: 1
+  opensetmode: All
+  store_tsne: false
+  store_image: false
+  # OSDAL 相关。注意默认值很危险：data_scenario 默认 "standard"、
+  # far_dataset 默认 "random"（会走 stock 噪声分支）、expanding_th 默认 100。
+  data_scenario: osal-extending
+  near_classes: []
+  far_classes: [-1]
+  ind_classes: [0, 1, 2, 3, 4, 5]
+  far_dataset: "None"
+  # RxRx1 池里每类约 33 张，论文的 25~100 会导致永远没有类被提升；
+  # 冒烟方案的 D 类只有 33 张，取 2 可在 2 轮内看到提升。
+  expanding_th: 2
+  data_config:
+    # 由 exp/rxrx1/exp1_osal/scripts/make_splits.py 生成并冻结
+    split_file: /home/yuxuan/my_project/SUAT-AL/exp/rxrx1/exp1_osal/configs/splits/smoke_s0.json
+    image_root: /home/yuxuan/my_project/SUAT-AL/data/wilds/rxrx1_v1.0
+    image_size: 256
+    verify_files: true
+
+training_config:
+  method_type: Joda
+  model: Resnet18T
+  model_configuration:
+    do_ratio: 0.0
+  pretrained: true
+  pretrained_backbone: false
+  num_epochs: 1
+  # 必须 <= L0（= I x initial_per_class = 6 x 2 = 12）：DataLoader 用了
+  # drop_last=True，batch_size > 已标注样本数会产生 0 个 batch，
+  # 然后在 train_epoch 里触发 ZeroDivisionError。
+  batch_size: 8
+  num_workers: 0
+  optimizer: Adam
+  lr: 0.001
+  wdcay: 0.00001
+  momentum: 0.9
+  scheduler:
+    type: poly
+  early_stopping: val_acc
+  patience: 5
+  loss_func: OutlierExposure
+  # OE 损失只在 triplet_mode=triplet 时作用于 label<0（far-OOD）；
+  # "off" 会把 label>=num_classes（即 D 类）当成 OOD，方向是错的。
+  triplet_mode: triplet
+  lambda_oe: 0.5
+  coverage_method: DSC
+  coverage_hyper: 0.75
+  coverage_al: incremental
+  surprise_strategy: surprise
+  gain_mode: energy
+  use_pca: false
+  seperator: metric
+  sep_metric: energy
+  acl_balancing: true
+  apply_ood_filter: true
+  # 必须显式给出：get_layer_output_nac 里 dataset 只对 cifar10/cifar100/imagenet
+  # 有内置 sig_alpha，rxrx1-ta 会走到 UnboundLocalError。
+  # 这里暂用 cifar100 那套（多类场景），属于**未经调优的超参**，见 notes.md。
+  # 键名对应层名：torchvision 结构下 layer1..layer4 -> Sequential-1..4，
+  # avgpool -> AdaptiveAvgPool2d-1，layer_selection 恰好取 Sequential-1/2/3 + avgpool。
+  sigmoids:
+    AdaptiveAvgPool2d-1: 50
+    Sequential-3: 10
+    Sequential-2: 1
+    Sequential-1: 0.005
+  new_model_eval: false

@@ -815,8 +815,17 @@ def iterate_module(name, module, name_list, module_list, mode = "cov"):
 
         if len(list(module.named_children())):
             for child_name, child_module in module.named_children():
+                # 递归时必须把 mode 传下去。原先漏了它，递归会静默回落到默认的
+                # "cov"（只认 Conv/Linear），于是 mode="nac" 时永远找不到嵌套的
+                # nn.Sequential / nn.AdaptiveAvgPool2d。
+                # 影响：`Resnet18T` 的直系子模块是 resnet/clsmodel（不是 Sequential），
+                # 结果 get_layer_output_nac 只产出 Conv2d-*/Linear-*，
+                # 与硬编码的 layer_selection 只对得上 Linear-1，而它又被
+                # "Linear" 分支跳过，最终 SA_batch 为空 -> torch.cat([]) 报错。
+                # 对 JODA 自带的模型无行为变化：它们的 layer1..4/avgpool 本来就在
+                # 第一层就命中 is_valid，不会进入这条递归。
                 name_list, module_list = \
-                    iterate_module(child_name, child_module, name_list, module_list)
+                    iterate_module(child_name, child_module, name_list, module_list, mode)
         return name_list, module_list
 
 def is_valid(module, mode = "cov"):

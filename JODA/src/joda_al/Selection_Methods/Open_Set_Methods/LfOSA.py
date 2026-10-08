@@ -32,7 +32,8 @@ class LfOSA(OpenSetQueryMethod):
         labelArr = []
         uncertaintyArr = []
         S_ij = {}
-        self.num_classes = int(list(models["task"].eval().children())[-1].out_features)
+        # 同上：改为从 dataset_config 取，避免依赖模型最后一层是 nn.Linear。
+        self.num_classes = int(dataset_handler.dataset_config["num_classes"])
 
         Len_labeled_ind_train = len(labeled_idx_set)
         unlabeledloader = dataset_handler.get_unlabeled_pool_loader(unlabeled_idx_set)

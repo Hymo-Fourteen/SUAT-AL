@@ -89,7 +89,12 @@ class JodaQuery(QueryMethod):
         self.stat_statistics = True # Boolean flag to compute statistics on labeled data (always set to True here).
         self.use_balancing = config["acl_balancing"]  # Boolean flag indicating whether balancing is applied in Active Coverage Learning.
         self.apply_ood_filter = config["apply_ood_filter"]  # Boolean flag indicating whether an OOD filter is applied to the data.
-        self.num_classes = int(list(models["task"].eval().children())[-1].out_features)  # Number of classes in the dataset, derived from the model's output layer.
+        # num_classes 从 dataset_config 取，不要从模型最后一层推。
+        # `Resnet18T` 的最后一层是自定义的 `ClassificationHead`（MLP），没有
+        # `out_features` 属性，原写法（list(models["task"].children())[-1].out_features）
+        # 在它上面会 AttributeError。两种取法语义相同——模型本来就是用
+        # dataset_config["num_classes"] 构造的，且每轮 update_data_pool 都会同步它。
+        self.num_classes = int(dataset_handler.dataset_config["num_classes"])
         self.device = device  # Specifies the device (e.g., CPU or GPU) used for computation.
 
         # Normalize dataset names for consistency (e.g., handling variations like "cifar10-variant").
@@ -231,7 +236,8 @@ class SisomQuery(QueryMethod):
         self.sigmoids = training_config["sigmoids"]
         self.cycle_num = training_config["cycle_num"]
         self.dataset = training_config["dataset"]
-        self.num_classes = int(list(models["task"].eval().children())[-1].out_features)
+        # 同 SisomQuery/ACLQuery：不要依赖模型最后一层是 nn.Linear。
+        self.num_classes = int(dataset_handler.dataset_config["num_classes"])
         if "cifar10-" in self.dataset:
             self.dataset = "cifar10"
         if "cifar100-" in self.dataset:

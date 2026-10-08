@@ -1,0 +1,4 @@
+# 实验产物目录：只保留占位文件，大产物（checkpoint / tfevents / 图 / csv）默认不入库。
+# 如需保留某些小结果，用 `git add -f <path>` 强制加入。
+*/results/*
+!*/results/.gitkeep

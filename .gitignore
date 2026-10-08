@@ -12,6 +12,10 @@ __cache__/
 # === 日志和模型 ===
 logs/
 *.model
+# ImageNet 预训练权重。JODA 的 torchResnet._resnet 用
+# load_state_dict_from_url(..., model_dir="../Model_Weights")，该路径相对**运行时的 CWD**，
+# 从 JODA/ 目录启动时会落在仓库根，故在此忽略。
+Model_Weights/
 
 # === 数据集（大文件） ===
 *.tar.gz

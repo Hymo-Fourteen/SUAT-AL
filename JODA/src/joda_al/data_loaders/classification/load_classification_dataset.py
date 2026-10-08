@@ -16,6 +16,13 @@ from joda_al.data_loaders.classification.classic_dataset import Cacheable_Places
 from joda_al.data_loaders.classification.tiny_imagenet_dataloader import load_tinyimagenet_pool, \
     TinyImageNet_train
 from joda_al.data_loaders.classification.plankton_dataloader import load_plankton_pool
+# RxRx1：实验代码在仓库根的 exp/rxrx1/common/，这里只 import 薄适配器暴露的
+# 入口与两个变换实例（详见该模块 docstring）。
+from joda_al.data_loaders.classification.rxrx1_data_loader import (
+    RXRX1_EVAL_TRANSFORM,
+    RXRX1_TRAIN_TRANSFORM,
+    load_rxrx1,
+)
 from joda_al.defintions import DataUpdateScenario
 from joda_al.data_loaders.classification.ood_detection_datasets import AlteredDataset, NoiseDataset, \
     OpenOODDataset, OODDataset
@@ -119,6 +126,9 @@ def load_classification_dataset(dataset, config, order=1) -> Tuple[Dataset, List
         "TinyImageNet": load_tinyimagenet,
         "SYKE-ZooScan": load_plankton_pool,
         "SYKE-IFCB": load_plankton_pool,
+        # dataset_comb_name 为 "rxrx1-ta-ta"，靠 startswith("rxrx1") 命中。
+        # 前缀匹配无歧义：没有别的 key 是 "rxrx1..." 的前缀。
+        "rxrx1": load_rxrx1,
         "GTAVS": load_gtavs,
         # IMPORTANT: cifar100 entries must be tested before cifar10 because
         # "cifar100..." also has "cifar10" as a string prefix.
@@ -597,6 +607,9 @@ def get_training_transformations_classification(dataset_name):
         "TinyImageNet-be": T.Compose([T.RandomHorizontalFlip(), T.RandomResizedCrop(size=64)]),
         "SYKE-ZooScan-ta": plankton_train_transform,
         "SYKE-IFCB-ta": plankton_train_transform,
+        # 训练变换叠在 eval 变换之上（后者已把池转成标准化张量），
+        # 所以这里只能是 tensor-safe、且不含 ToTensor 的增强。
+        "rxrx1-ta": RXRX1_TRAIN_TRANSFORM,
     }
     trans = _lookup_dataset_transform(dataset_name, trans_map)
     return {"transform":trans,"transforms": None}
@@ -631,6 +644,12 @@ def get_eval_transformations_classification(dataset_name):
         "TinyImageNetL-ta": T.Resize((224, 224)),
         "SYKE-ZooScan-ta": plankton_eval_transform,
         "SYKE-IFCB-ta": plankton_eval_transform,
+        # 这个变换会被包在池、验证集、测试集上（`dataset[\"name\"]` 为 "rxrx1-ta"，
+        # 不在下面的白名单里）。池必须变成张量：`get_unlabeled_pool_loader` 直接
+        # 吃 train_pool，能源评分拿不到 tensor 就会崩。
+        # 用逐图实例标准化而非 ImageNet 固定 mean/std，原因见
+        # exp/rxrx1/common/transforms.py。
+        "rxrx1-ta": RXRX1_EVAL_TRANSFORM,
     }
     transformation = _lookup_dataset_transform(dataset_name, trans_map)
     if transformation is None:
